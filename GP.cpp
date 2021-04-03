@@ -3,12 +3,7 @@
 #include <string.h>
 #include <vector>
 #include <filesystem>
-
-// Open CV imports
-//#include <core.hpp>
-//#include <highgui.hpp>
 #include "opencv2/opencv.hpp"
-// Open CV imports end
 
 using std::cout;
 using std::endl;
@@ -83,10 +78,10 @@ void readDataset(vector<dataset> * data) {
 
 namespace GP {
     // Params for evolution
-    int populationSize = 500;
-    int selectionSize  = 7;
-    int maxDepth       = 8;
-    int maxGenerations = 50;
+    int populationSize = 500; // Number of agents per round
+    int selectionSize  = 7;   // ?
+    int maxDepth       = 8;   // ?
+    int maxGenerations = 50;  // Max number of generations
 
     struct Agent {
         int classification() {return -1;}

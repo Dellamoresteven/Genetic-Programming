@@ -27,8 +27,7 @@ int main() {
 }
 
 void readDataset(vector<dataset> * data) {
-    //Mat img = imread("./data/1/ped_examples/img_00000.pgm", IMREAD_COLOR);
-    Mat img = imread("./test.jpg", IMREAD_COLOR);
+    Mat img = imread("./data/1/ped_examples/img_00000.pgm", IMREAD_COLOR);
     if(img.empty()) {
         std::cout << "No Image to read" << endl;
         return;

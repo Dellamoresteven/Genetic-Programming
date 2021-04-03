@@ -10,7 +10,10 @@
 #include "opencv2/opencv.hpp"
 // Open CV imports end
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::vector;
+using std::string;
 using namespace cv;
 namespace fs = std::filesystem;
 
@@ -20,27 +23,18 @@ struct dataset {
     string label;
 
     // ROI's in the research paper
-    int ABED;
-    int BCFE;
-    int DEHG;
-    int EFIH;
-    int GHKJ;
-    int HILK;
-    int JKNM;
-    int KLON;
-    int PQSR;
-    int RSUT;
-    int TUWV;
+    float ABED;
+    float BCFE;
+    float DEHG;
+    float EFIH;
+    float GHKJ;
+    float HILK;
+    float JKNM;
+    float KLON;
+    float PQSR;
+    float RSUT;
+    float TUWV;
 };
-
-void readDataset(vector<dataset> * data);
-void extractFeatures(vector<dataset> * data);
-
-int main() {
-    vector<dataset> data;
-    readDataset(&data);
-    extractFeatures(&data);
-}
 
 void extractFeatures(vector<dataset> * data) {
     // All images should be the same size
@@ -88,4 +82,34 @@ void readDataset(vector<dataset> * data) {
 }
 
 namespace GP {
+    // Params for evolution
+    int populationSize = 500;
+    int selectionSize  = 7;
+    int maxDepth       = 8;
+    int maxGenerations = 50;
+
+    struct Agent {
+        int classification() {return -1;}
+        int fitness() {return -1;}
+        int mutation() {return -1;}
+    };
+
+    vector<Agent> agents;
+
+    void initPopulation() {
+        for(int i = 0; i < populationSize; i++) {
+            Agent a;
+            agents.push_back(a);
+        }
+    }
+}
+
+
+int main() {
+    vector<dataset> data;
+    readDataset(&data);
+    extractFeatures(&data);
+
+    // Start of GP stuff
+    GP::initPopulation();
 }

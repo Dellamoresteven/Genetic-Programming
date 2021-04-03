@@ -20,17 +20,17 @@ struct dataset {
     string label;
 
     // ROI's in the research paper
-    Mat ABED;
-    Mat BCFE;
-    Mat DEHG;
-    Mat EFIH;
-    Mat GHKJ;
-    Mat HILK;
-    Mat JKNM;
-    Mat KLON;
-    Mat PQSR;
-    Mat RSUT;
-    Mat TUWV;
+    int ABED;
+    int BCFE;
+    int DEHG;
+    int EFIH;
+    int GHKJ;
+    int HILK;
+    int JKNM;
+    int KLON;
+    int PQSR;
+    int RSUT;
+    int TUWV;
 };
 
 void readDataset(vector<dataset> * data);
@@ -48,9 +48,9 @@ void extractFeatures(vector<dataset> * data) {
     int cols = data->at(0).img.cols;
 
     auto MeanROICalc = [](Mat i, int x1, int x2, int y1, int y2) {
-        cv::Mat mean, stddev;
+        cv::Scalar mean, stddev;
         cv::meanStdDev(i(cv::Range(x1, x2), cv::Range(y1, y2)), mean, stddev);
-        return mean;
+        return mean[0];
     };
 
     for(auto & entry : *data) {

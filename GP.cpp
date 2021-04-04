@@ -92,11 +92,8 @@ namespace GP {
 
     struct Agent {
         struct DNA {
-            DNA * firstNode = nullptr;
-            DNA * secondNode = nullptr;
-            DNA * thirdNode = nullptr;
-            string type;
-            int value;
+            bool isOp;
+            float value;
         };
         vector<DNA> DNAStrain;
         int classification() {return -1;}
@@ -106,31 +103,51 @@ namespace GP {
 
     vector<Agent> agents;
 
+    float randomDNAChoice(bool * isOp) {
+        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        if(randNum <= OpChance) {
+            *isOp = true;
+            return float(rand() % 4);
+        } else if(randNum <= (OpChance + constChance)) {
+            return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
+        } else {
+            return float(0);
+        }
+    }
+
+    void recursion(int op, int depth, auto * DNAStrain) {
+        if(depth > maxDepth) { return; }
+        //float choice = randomChoice(&isOp);
+
+        depth += 1;
+        switch(op) {
+            case 0: // +
+                {
+                    bool isOp = false;
+                    float first = randomDNAChoice(&isOp);
+                    break;
+                }
+            case 1: // -
+                break;
+            case 2: // *
+                break;
+            case 3: // %
+                break;
+            case 4: // If
+                break;
+        }
+        depth += 1;
+    }
+
     void randomDNA(auto * DNAStrain) {
         int depth = 0;
-        int Plus = -101;
-        int Minus = -102;
-        int Div = -103;
-        int Mul = -104;
-        int If = -105;
 
-        auto randomChoice = []() {
-            float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            if(randNum <= OpChance) {
-                return float(rand() % 5)-105;
-            } else if(randNum <= (OpChance + constChance)) {
-                return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
-            } else {
-                return float(0);
-            }
-        };
-        cout << randomChoice() << endl;
 
-        auto recursion = [&]() {
-        };
-
-        while(depth < maxDepth) {
+        recursion(0, 0, DNAStrain);
+        for(const auto & d : *DNAStrain) {
+            cout << d.isOp << ":" << d.value << ",";
         }
+        cout << "\n";
     }
 
     void initPopulation() {

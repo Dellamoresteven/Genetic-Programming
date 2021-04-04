@@ -229,20 +229,10 @@ namespace GP {
         int op = float(rand() % 4);
         DNA->push_back(Agent::nucleotide(0, op));
         buildDNA(op, 0, DNA);
-        for(const auto & d : *DNA) {
-            if(d.type == 0) {
-                cout << "O";
-            } else if(d.type == 2) {
-                cout << "F";
-            } else {
-                cout << "C";
-            }
-        }
-        cout << "\n";
     }
 
     void initPopulation() {
-        for(int i = 0; i < 1; i++) {
+        for(int i = 0; i < 10; i++) {
             Agent a;
             randomDNA(&a.DNA);
             agents.push_back(a);
@@ -250,7 +240,10 @@ namespace GP {
     }
 
     void classifyAgents(vector<dataset> data) {
-        for(const auto & d : data) {
+        //for(const auto & d : data) {
+        for(int i = 0; i < 5; i ++) {
+            cout << "####################################### IMAGE " << i << " #######################################" << endl;
+            auto d = data.at(i);
             for(auto & a : agents) {
                 a.classification(d);
             }

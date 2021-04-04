@@ -3,6 +3,8 @@
 #include <string.h>
 #include <vector>
 #include <filesystem>
+#include <cstdlib>
+#include <ctime>
 #include "opencv2/opencv.hpp"
 
 using std::cout;
@@ -78,12 +80,22 @@ void readDataset(vector<dataset> * data) {
 
 namespace GP {
     // Params for evolution
-    int populationSize = 500; // Number of agents per round
-    int selectionSize  = 7;   // ?
-    int maxDepth       = 8;   // ?
-    int maxGenerations = 50;  // Max number of generations
+    int   populationSize = 500;  // Number of agents per round
+    int   selectionSize  = 7;    // ?
+    int   maxDepth       = 8;    // Max Depth of classification tree
+    int   maxGenerations = 50;   // Max number of generations
+    float OpChance       = 0.33; // Chance of adding an operator to the DNA
+    float constChance    = 0.33; // Chance of adding a constant to the DNA
+    float featureChance  = 0.33; // Chance of adding a feature to the DNA
 
     struct Agent {
+        struct DNA {
+            DNA * firstNode = nullptr;
+            DNA * secondNode = nullptr;
+            DNA * thirdNode = nullptr;
+            string type;
+            int value;
+        } DNAStrain;
         int classification() {return -1;}
         int fitness() {return -1;}
         int mutation() {return -1;}
@@ -91,9 +103,28 @@ namespace GP {
 
     vector<Agent> agents;
 
+    void randomDNA(auto * DNAStrain) {
+        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        bool Op = true;
+        int depth = 0;
+        while(depth < maxDepth) {
+            if(DNAStrain->type == "op") {
+                if(randNum <= OpChance) { // Op
+                    cout << "Op Chosen" << endl;
+                } else if(randNum <= (OpChance + constChance)) { // Const
+                    cout << "Const Chosen" << endl;
+                } else { // Feature
+                    cout << "Feature Chosen" << endl;
+                }
+            }
+            depth += 1;
+        }
+    }
+
     void initPopulation() {
         for(int i = 0; i < populationSize; i++) {
             Agent a;
+            randomDNA(&a.DNAStrain);
             agents.push_back(a);
         }
     }
@@ -101,6 +132,7 @@ namespace GP {
 
 
 int main() {
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
     vector<dataset> data;
     readDataset(&data);
     extractFeatures(&data);

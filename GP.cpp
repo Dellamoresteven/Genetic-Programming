@@ -110,10 +110,11 @@ void readDataset(vector<dataset> * data) {
 
 namespace GP {
     // Params for evolution
-    int   populationSize = 500;  // Number of agents per round
-    int   selectionSize  = 7;    // ?
+    int   populationSize = 100;  // Number of agents per round
+    int   selectionSize  = 7;    // Number of agents in the tournament selection
     int   maxDepth       = 8;    // Max Depth of classification tree
     int   maxGenerations = 50;   // Max number of generations
+    int   numBreed       = 3;    // Number of new agents during breeding
     float mutationRate   = .05;  // % mutation rate of DNA
     float OpChance       = 0.33; // Chance of adding an operator to the DNA
     float constChance    = 0.33; // Chance of adding a constant to the DNA
@@ -128,7 +129,12 @@ namespace GP {
         };
         vector<nucleotide> DNA;
         vector<float> classificationsScores;
-        vector<float> fitnessScores;
+        float fitness;
+
+        void reset() {
+            classificationsScores.clear();
+            fitness = 0;
+        }
 
         float classificationSolver(int index, dataset img) {
             nucleotide first = DNA.at(index+1);
@@ -168,19 +174,35 @@ namespace GP {
             return 0.0;
         }
         void classification(dataset img) {
-            for(const auto & d : DNA) {
-                if(d.type == 0) {
-                    cout << "O";
-                } else if(d.type == 2) {
-                    cout << "F";
-                } else {
-                    cout << "C";
+            //for(const auto & d : DNA) {
+                //if(d.type == 0) {
+                    //cout << "O";
+                //} else if(d.type == 2) {
+                    //cout << "F";
+                //} else {
+                    //cout << "C";
+                //}
+            //}
+            float score = classificationSolver(0, img);
+            //cout << " = " << score << endl;
+            classificationsScores.push_back(score);
+        }
+
+        void fitnessTrival(vector<dataset> data) {
+            // (-inf, 0) == Non-ped
+            // [0, inf) == ped
+            int correct = 0;
+            for(int i = 0; i < int(data.size()); i++) {
+                auto d = data.at(i);
+                float score = classificationsScores.at(i);
+                if(d.label == "ped" && score >= 0) {
+                    correct += 1;
+                } else if(d.label == "non-ped" && score < 0) {
+                    correct += 1;
                 }
             }
-            cout << " = " << classificationSolver(0, img) << endl;
+            fitness = float(correct) / classificationsScores.size();
         }
-        void fitness() {}
-        void mutation() {}
     };
 
     vector<Agent> agents;
@@ -232,7 +254,7 @@ namespace GP {
     }
 
     void initPopulation() {
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < populationSize; i++) {
             Agent a;
             randomDNA(&a.DNA);
             agents.push_back(a);
@@ -241,13 +263,39 @@ namespace GP {
 
     void classifyAgents(vector<dataset> data) {
         //for(const auto & d : data) {
-        for(int i = 0; i < 5; i ++) {
-            cout << "####################################### IMAGE " << i << " #######################################" << endl;
+        for(int i = 0; i < int(data.size()); i ++) {
+            //cout << "####################################### IMAGE " << i << " #######################################" << endl;
             auto d = data.at(i);
             for(auto & a : agents) {
                 a.classification(d);
             }
         }
+    }
+
+    void fitnessAgents(vector<dataset> data) {
+        for(auto & a : agents) {
+            a.fitnessTrival(data);
+        }
+    }
+
+    Agent crossover(Agent p1, Agent p2) {
+        Agent newAgent;
+        vector<GP::Agent::nucleotide> DNA;
+        newAgent.DNA = DNA;
+        return newAgent;
+    }
+
+    void breed() {
+        vector<GP::Agent> tournament;
+        for(int i = 0; i < selectionSize; i++) {
+            tournament.push_back(GP::agents.at(int(rand() % GP::agents.size())));
+        }
+        std::sort(tournament.begin(), tournament.end(), [](GP::Agent one, GP::Agent two){
+            return one.fitness > two.fitness;
+        });
+        Agent newAgent = crossover(tournament.at(0), tournament.at(1));
+        //GP::agents.pop_back();
+        //GP::agents.insert(GP::agents.begin(), newAgent);
     }
 }
 
@@ -258,7 +306,25 @@ int main() {
     readDataset(&data);
     extractFeatures(&data);
 
-    // Start of GP stuff
     GP::initPopulation();
-    GP::classifyAgents(data);
+
+    for(int k = 0; k < GP::maxGenerations; k++) {
+        cout << "GENERATION: " << k << endl;
+        // Start of GP stuff
+        GP::classifyAgents(data);
+        GP::fitnessAgents(data);
+
+        std::sort(GP::agents.begin(), GP::agents.end(), [](GP::Agent one, GP::Agent two){
+            return one.fitness > two.fitness;
+        });
+        for(int i = 0; i < 10; i++) {
+            cout << "Fitness: " << GP::agents.at(i).fitness << endl;
+        }
+        for(int i = 0; i < GP::numBreed; i++) {
+            GP::breed();
+        }
+        for(auto & a : GP::agents) {
+            a.reset();
+        }
+    }
 }

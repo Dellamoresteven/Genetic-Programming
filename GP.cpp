@@ -87,6 +87,8 @@ namespace GP {
     float OpChance       = 0.33; // Chance of adding an operator to the DNA
     float constChance    = 0.33; // Chance of adding a constant to the DNA
     float featureChance  = 0.33; // Chance of adding a feature to the DNA
+    int   minConst       = -100; // Min const
+    int   maxConst       = 100;  // Max const
 
     struct Agent {
         struct DNA {
@@ -95,7 +97,8 @@ namespace GP {
             DNA * thirdNode = nullptr;
             string type;
             int value;
-        } DNAStrain;
+        };
+        vector<DNA> DNAStrain;
         int classification() {return -1;}
         int fitness() {return -1;}
         int mutation() {return -1;}
@@ -104,20 +107,29 @@ namespace GP {
     vector<Agent> agents;
 
     void randomDNA(auto * DNAStrain) {
-        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        bool Op = true;
         int depth = 0;
-        while(depth < maxDepth) {
-            if(DNAStrain->type == "op") {
-                if(randNum <= OpChance) { // Op
-                    cout << "Op Chosen" << endl;
-                } else if(randNum <= (OpChance + constChance)) { // Const
-                    cout << "Const Chosen" << endl;
-                } else { // Feature
-                    cout << "Feature Chosen" << endl;
-                }
+        int Plus = -101;
+        int Minus = -102;
+        int Div = -103;
+        int Mul = -104;
+        int If = -105;
+
+        auto randomChoice = []() {
+            float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            if(randNum <= OpChance) {
+                return float(rand() % 5)-105;
+            } else if(randNum <= (OpChance + constChance)) {
+                return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
+            } else {
+                return float(0);
             }
-            depth += 1;
+        };
+        cout << randomChoice() << endl;
+
+        auto recursion = [&]() {
+        };
+
+        while(depth < maxDepth) {
         }
     }
 

@@ -91,11 +91,11 @@ namespace GP {
     int   maxConst       = 100;  // Max const
 
     struct Agent {
-        struct DNA {
+        struct nucleotide {
             bool isOp;
             float value;
         };
-        vector<DNA> DNAStrain;
+        vector<nucleotide> DNA;
         int classification() {return -1;}
         int fitness() {return -1;}
         int mutation() {return -1;}
@@ -103,57 +103,55 @@ namespace GP {
 
     vector<Agent> agents;
 
-    float randomDNAChoice(bool * isOp) {
+    float randomDNAChoice(bool * isOp, bool isAtMax) {
         float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        if(randNum <= OpChance) {
-            *isOp = true;
-            return float(rand() % 4);
-        } else if(randNum <= (OpChance + constChance)) {
-            return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
+        if(!isAtMax) {
+            if(randNum <= OpChance) {
+                *isOp = true;
+                return float(rand() % 4);
+            } else if(randNum <= (OpChance + constChance)) {
+                return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
+            } else {
+                return float(0);
+            }
         } else {
-            return float(0);
+            if(randNum <= (OpChance/2 + constChance)) {
+                return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
+            } else {
+                return float(0);
+            }
         }
     }
 
-    void recursion(int op, int depth, auto * DNAStrain) {
-        if(depth > maxDepth) { return; }
-        //float choice = randomChoice(&isOp);
-
+    void buildDNA(int op, int depth, auto * DNA) {
         depth += 1;
-        switch(op) {
-            case 0: // +
-                {
-                    bool isOp = false;
-                    float first = randomDNAChoice(&isOp);
-                    break;
-                }
-            case 1: // -
-                break;
-            case 2: // *
-                break;
-            case 3: // %
-                break;
-            case 4: // If
-                break;
+        bool isOp = false;
+        float first = randomDNAChoice(&isOp, depth == maxDepth);
+        DNA->push_back(Agent::nucleotide(isOp, first));
+        if(isOp) {
+            buildDNA(int(first), depth, DNA);
         }
-        depth += 1;
+        isOp = false;
+        float second = randomDNAChoice(&isOp, depth == maxDepth);
+        DNA->push_back(Agent::nucleotide(isOp, second));
+        if(isOp) {
+            buildDNA(int(second), depth, DNA);
+        }
     }
 
-    void randomDNA(auto * DNAStrain) {
-        int depth = 0;
-
-
-        recursion(0, 0, DNAStrain);
-        for(const auto & d : *DNAStrain) {
-            cout << d.isOp << ":" << d.value << ",";
+    void randomDNA(auto * DNA) {
+        DNA->push_back(Agent::nucleotide(true, 0));
+        buildDNA(0, 0, DNA);
+        for(const auto & d : *DNA) {
+            cout << d.isOp << ":" << d.value << " , ";
         }
         cout << "\n";
     }
 
     void initPopulation() {
-        for(int i = 0; i < populationSize; i++) {
+        for(int i = 0; i < 10; i++) {
             Agent a;
-            randomDNA(&a.DNAStrain);
+            randomDNA(&a.DNA);
             agents.push_back(a);
         }
     }

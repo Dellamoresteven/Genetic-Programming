@@ -31,6 +31,36 @@ struct dataset {
     float PQSR;
     float RSUT;
     float TUWV;
+
+    float replaceFeature(int featureToReplace) {
+        switch(featureToReplace) {
+            case 0:
+                return ABED;
+            case 1:
+                return BCFE;
+            case 2:
+                return DEHG;
+            case 3:
+                return EFIH;
+            case 4:
+                return GHKJ;
+            case 5:
+                return HILK;
+            case 6:
+                return JKNM;
+            case 7:
+                return KLON;
+            case 8:
+                return PQSR;
+            case 9:
+                return RSUT;
+            case 10:
+                return TUWV;
+            default:
+                cout << "feature to large" << endl;
+                exit(1);
+        }
+    }
 };
 
 void extractFeatures(vector<dataset> * data) {
@@ -72,8 +102,8 @@ void readDataset(vector<dataset> * data) {
     };
     readFunc("./data/1/ped_examples/", "ped");
     readFunc("./data/1/non-ped_examples/", "non-ped");
-    readFunc("./data/2/ped_examples/", "ped");
-    readFunc("./data/2/non-ped_examples/", "non-ped");
+    //readFunc("./data/2/ped_examples/", "ped");
+    //readFunc("./data/2/non-ped_examples/", "non-ped");
     //readFunc("./data/3/ped_examples/", "ped");
     //readFunc("./data/3/non-ped_examples/", "non-ped");
 }
@@ -84,6 +114,7 @@ namespace GP {
     int   selectionSize  = 7;    // ?
     int   maxDepth       = 8;    // Max Depth of classification tree
     int   maxGenerations = 50;   // Max number of generations
+    float mutationRate   = .05;  // % mutation rate of DNA
     float OpChance       = 0.33; // Chance of adding an operator to the DNA
     float constChance    = 0.33; // Chance of adding a constant to the DNA
     float featureChance  = 0.33; // Chance of adding a feature to the DNA
@@ -96,9 +127,60 @@ namespace GP {
             float value;
         };
         vector<nucleotide> DNA;
-        int classification(dataset img) {return -1;}
-        int fitness() {return -1;}
-        int mutation() {return -1;}
+        vector<float> classificationsScores;
+        vector<float> fitnessScores;
+
+        float classificationSolver(int index, dataset img) {
+            nucleotide first = DNA.at(index+1);
+            float firstValue = first.value;
+            if(first.type == 0) // op
+                firstValue = classificationSolver(index+1, img);
+            if(first.type == 2) // feature
+                firstValue = img.replaceFeature(first.value);
+            nucleotide second = DNA.at(index+2);
+            float secondValue = second.value;
+            if(second.type == 0) // op
+                secondValue = classificationSolver(index+2, img);
+            if(second.type == 2) // feature
+                secondValue = img.replaceFeature(second.value);
+            switch(int(DNA.at(index).value)) {
+                case 0: // +
+                    return firstValue + secondValue;
+                    break;
+                case 1: // -
+                    return firstValue - secondValue;
+                    break;
+                case 2: // *
+                    return firstValue * secondValue;
+                    break;
+                case 3: // %
+                    if(second.value == 0) return 0;
+                    return firstValue / secondValue;
+                    break;
+                case 4: // if
+                    cout << "if called" << endl;
+                    exit(1);
+                    break;
+                default:
+                    cout << "Something broke" << endl;
+                    exit(1);
+            }
+            return 0.0;
+        }
+        void classification(dataset img) {
+            for(const auto & d : DNA) {
+                if(d.type == 0) {
+                    cout << "O";
+                } else if(d.type == 2) {
+                    cout << "F";
+                } else {
+                    cout << "C";
+                }
+            }
+            cout << " = " << classificationSolver(0, img) << endl;
+        }
+        void fitness() {}
+        void mutation() {}
     };
 
     vector<Agent> agents;
@@ -144,8 +226,9 @@ namespace GP {
     }
 
     void randomDNA(auto * DNA) {
-        DNA->push_back(Agent::nucleotide(0, 0));
-        buildDNA(0, 0, DNA);
+        int op = float(rand() % 4);
+        DNA->push_back(Agent::nucleotide(0, op));
+        buildDNA(op, 0, DNA);
         for(const auto & d : *DNA) {
             if(d.type == 0) {
                 cout << "O";
@@ -159,7 +242,7 @@ namespace GP {
     }
 
     void initPopulation() {
-        for(int i = 0; i < populationSize; i++) {
+        for(int i = 0; i < 1; i++) {
             Agent a;
             randomDNA(&a.DNA);
             agents.push_back(a);

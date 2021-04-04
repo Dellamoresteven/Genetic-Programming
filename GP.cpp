@@ -92,67 +92,85 @@ namespace GP {
 
     struct Agent {
         struct nucleotide {
-            bool isOp;
+            int type;
             float value;
         };
         vector<nucleotide> DNA;
-        int classification() {return -1;}
+        int classification(dataset img) {return -1;}
         int fitness() {return -1;}
         int mutation() {return -1;}
     };
 
     vector<Agent> agents;
 
-    float randomDNAChoice(bool * isOp, bool isAtMax) {
+    float randomDNAChoice(int * type, bool isAtMax) {
         float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
         if(!isAtMax) {
             if(randNum <= OpChance) {
-                *isOp = true;
+                *type = 0;
                 return float(rand() % 4);
             } else if(randNum <= (OpChance + constChance)) {
+                *type = 1;
                 return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
             } else {
-                return float(0);
+                *type = 2;
+                return float(rand() % 11);
             }
         } else {
             if(randNum <= (OpChance/2 + constChance)) {
+                *type = 1;
                 return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
             } else {
-                return float(0);
+                *type = 2;
+                return float(rand() % 11);
             }
         }
     }
 
     void buildDNA(int op, int depth, auto * DNA) {
         depth += 1;
-        bool isOp = false;
-        float first = randomDNAChoice(&isOp, depth == maxDepth);
-        DNA->push_back(Agent::nucleotide(isOp, first));
-        if(isOp) {
+        int type;
+        float first = randomDNAChoice(&type, depth == maxDepth);
+        DNA->push_back(Agent::nucleotide(type, first));
+        if(type == 0) {
             buildDNA(int(first), depth, DNA);
         }
-        isOp = false;
-        float second = randomDNAChoice(&isOp, depth == maxDepth);
-        DNA->push_back(Agent::nucleotide(isOp, second));
-        if(isOp) {
+        float second = randomDNAChoice(&type, depth == maxDepth);
+        DNA->push_back(Agent::nucleotide(type, second));
+        if(type == 0) {
             buildDNA(int(second), depth, DNA);
         }
     }
 
     void randomDNA(auto * DNA) {
-        DNA->push_back(Agent::nucleotide(true, 0));
+        DNA->push_back(Agent::nucleotide(0, 0));
         buildDNA(0, 0, DNA);
         for(const auto & d : *DNA) {
-            cout << d.isOp << ":" << d.value << " , ";
+            if(d.type == 0) {
+                cout << "O";
+            } else if(d.type == 2) {
+                cout << "F";
+            } else {
+                cout << "C";
+            }
         }
         cout << "\n";
     }
 
     void initPopulation() {
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < populationSize; i++) {
             Agent a;
             randomDNA(&a.DNA);
             agents.push_back(a);
+        }
+    }
+
+    void classifyAgents(vector<dataset> data) {
+        for(const auto & d : data) {
+            for(auto & a : agents) {
+                a.classification(d);
+            }
         }
     }
 }
@@ -166,4 +184,5 @@ int main() {
 
     // Start of GP stuff
     GP::initPopulation();
+    GP::classifyAgents(data);
 }

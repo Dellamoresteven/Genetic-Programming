@@ -126,6 +126,8 @@ namespace GP {
         struct nucleotide {
             int type;
             float value;
+            bool leftRoot;
+            bool rightRoot;
         };
         vector<nucleotide> DNA;
         vector<float> classificationsScores;
@@ -173,6 +175,7 @@ namespace GP {
             }
             return 0.0;
         }
+
         void classification(dataset img) {
             //for(const auto & d : DNA) {
                 //if(d.type == 0) {
@@ -232,25 +235,25 @@ namespace GP {
         }
     }
 
-    void buildDNA(int op, int depth, auto * DNA) {
+    void buildDNA(int op, int depth, auto * DNA, bool isRoot) {
         depth += 1;
         int type;
         float first = randomDNAChoice(&type, depth == maxDepth);
-        DNA->push_back(Agent::nucleotide(type, first));
+        DNA->push_back(Agent::nucleotide(type, first, true, false));
         if(type == 0) {
-            buildDNA(int(first), depth, DNA);
+            buildDNA(int(first), depth, DNA, false);
         }
         float second = randomDNAChoice(&type, depth == maxDepth);
-        DNA->push_back(Agent::nucleotide(type, second));
+        DNA->push_back(Agent::nucleotide(type, second, false, true));
         if(type == 0) {
-            buildDNA(int(second), depth, DNA);
+            buildDNA(int(second), depth, DNA, false);
         }
     }
 
     void randomDNA(auto * DNA) {
         int op = float(rand() % 4);
-        DNA->push_back(Agent::nucleotide(0, op));
-        buildDNA(op, 0, DNA);
+        DNA->push_back(Agent::nucleotide(0, op, false, false));
+        buildDNA(op, 0, DNA, true);
     }
 
     void initPopulation() {
@@ -276,6 +279,44 @@ namespace GP {
         for(auto & a : agents) {
             a.fitnessTrival(data);
         }
+    }
+
+    float crossoverSolver(int index, dataset img) {
+        //nucleotide first = DNA.at(index+1);
+        //float firstValue = first.value;
+        //if(first.type == 0) // op
+            //firstValue = crossoverSolver(index+1, img);
+        //if(first.type == 2) // feature
+            //firstValue = img.replaceFeature(first.value);
+        //nucleotide second = DNA.at(index+2);
+        //float secondValue = second.value;
+        //if(second.type == 0) // op
+            //secondValue = crossoverSolver(index+2, img);
+        //if(second.type == 2) // feature
+            //secondValue = img.replaceFeature(second.value);
+        //switch(int(DNA.at(index).value)) {
+            //case 0: // +
+                //return firstValue + secondValue;
+                //break;
+            //case 1: // -
+                //return firstValue - secondValue;
+                //break;
+            //case 2: // *
+                //return firstValue * secondValue;
+                //break;
+            //case 3: // %
+                //if(second.value == 0) return 0;
+                //return firstValue / secondValue;
+                //break;
+            //case 4: // if
+                //cout << "if called" << endl;
+                //exit(1);
+                //break;
+            //default:
+                //cout << "Something broke" << endl;
+                //exit(1);
+        //}
+        //return 0.0;
     }
 
     Agent crossover(Agent p1, Agent p2) {

@@ -122,221 +122,12 @@ namespace GP {
     int   minConst       = -100; // Min const
     int   maxConst       = 100;  // Max const
 
-    struct Agent {
-        struct nucleotide {
-            int type;
-            float value;
-            bool leftRoot;
-            bool rightRoot;
-        };
-        vector<nucleotide> DNA;
-        vector<float> classificationsScores;
-        float fitness;
-
-        void reset() {
-            classificationsScores.clear();
-            fitness = 0;
-        }
-
-        float classificationSolver(int index, dataset img) {
-            nucleotide first = DNA.at(index+1);
-            float firstValue = first.value;
-            if(first.type == 0) // op
-                firstValue = classificationSolver(index+1, img);
-            if(first.type == 2) // feature
-                firstValue = img.replaceFeature(first.value);
-            nucleotide second = DNA.at(index+2);
-            float secondValue = second.value;
-            if(second.type == 0) // op
-                secondValue = classificationSolver(index+2, img);
-            if(second.type == 2) // feature
-                secondValue = img.replaceFeature(second.value);
-            switch(int(DNA.at(index).value)) {
-                case 0: // +
-                    return firstValue + secondValue;
-                    break;
-                case 1: // -
-                    return firstValue - secondValue;
-                    break;
-                case 2: // *
-                    return firstValue * secondValue;
-                    break;
-                case 3: // %
-                    if(second.value == 0) return 0;
-                    return firstValue / secondValue;
-                    break;
-                case 4: // if
-                    cout << "if called" << endl;
-                    exit(1);
-                    break;
-                default:
-                    cout << "Something broke" << endl;
-                    exit(1);
-            }
-            return 0.0;
-        }
-
-        void classification(dataset img) {
-            //for(const auto & d : DNA) {
-                //if(d.type == 0) {
-                    //cout << "O";
-                //} else if(d.type == 2) {
-                    //cout << "F";
-                //} else {
-                    //cout << "C";
-                //}
-            //}
-            float score = classificationSolver(0, img);
-            //cout << " = " << score << endl;
-            classificationsScores.push_back(score);
-        }
-
-        void fitnessTrival(vector<dataset> data) {
-            // (-inf, 0) == Non-ped
-            // [0, inf) == ped
-            int correct = 0;
-            for(int i = 0; i < int(data.size()); i++) {
-                auto d = data.at(i);
-                float score = classificationsScores.at(i);
-                if(d.label == "ped" && score >= 0) {
-                    correct += 1;
-                } else if(d.label == "non-ped" && score < 0) {
-                    correct += 1;
-                }
-            }
-            fitness = float(correct) / classificationsScores.size();
-        }
-    };
-
     vector<Agent> agents;
-
-    float randomDNAChoice(int * type, bool isAtMax) {
-        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-
-        if(!isAtMax) {
-            if(randNum <= OpChance) {
-                *type = 0;
-                return float(rand() % 4);
-            } else if(randNum <= (OpChance + constChance)) {
-                *type = 1;
-                return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
-            } else {
-                *type = 2;
-                return float(rand() % 11);
-            }
-        } else {
-            if(randNum <= (OpChance/2 + constChance)) {
-                *type = 1;
-                return minConst + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxConst - minConst)));
-            } else {
-                *type = 2;
-                return float(rand() % 11);
-            }
-        }
-    }
-
-    void buildDNA(int op, int depth, auto * DNA, bool isRoot) {
-        depth += 1;
-        int type;
-        float first = randomDNAChoice(&type, depth == maxDepth);
-        DNA->push_back(Agent::nucleotide(type, first, true, false));
-        if(type == 0) {
-            buildDNA(int(first), depth, DNA, false);
-        }
-        float second = randomDNAChoice(&type, depth == maxDepth);
-        DNA->push_back(Agent::nucleotide(type, second, false, true));
-        if(type == 0) {
-            buildDNA(int(second), depth, DNA, false);
-        }
-    }
-
-    void randomDNA(auto * DNA) {
-        int op = float(rand() % 4);
-        DNA->push_back(Agent::nucleotide(0, op, false, false));
-        buildDNA(op, 0, DNA, true);
-    }
 
     void initPopulation() {
         for(int i = 0; i < populationSize; i++) {
-            Agent a;
-            randomDNA(&a.DNA);
-            agents.push_back(a);
+
         }
-    }
-
-    void classifyAgents(vector<dataset> data) {
-        //for(const auto & d : data) {
-        for(int i = 0; i < int(data.size()); i ++) {
-            //cout << "####################################### IMAGE " << i << " #######################################" << endl;
-            auto d = data.at(i);
-            for(auto & a : agents) {
-                a.classification(d);
-            }
-        }
-    }
-
-    void fitnessAgents(vector<dataset> data) {
-        for(auto & a : agents) {
-            a.fitnessTrival(data);
-        }
-    }
-
-    float crossoverSolver(int index, dataset img) {
-        //nucleotide first = DNA.at(index+1);
-        //float firstValue = first.value;
-        //if(first.type == 0) // op
-            //firstValue = crossoverSolver(index+1, img);
-        //if(first.type == 2) // feature
-            //firstValue = img.replaceFeature(first.value);
-        //nucleotide second = DNA.at(index+2);
-        //float secondValue = second.value;
-        //if(second.type == 0) // op
-            //secondValue = crossoverSolver(index+2, img);
-        //if(second.type == 2) // feature
-            //secondValue = img.replaceFeature(second.value);
-        //switch(int(DNA.at(index).value)) {
-            //case 0: // +
-                //return firstValue + secondValue;
-                //break;
-            //case 1: // -
-                //return firstValue - secondValue;
-                //break;
-            //case 2: // *
-                //return firstValue * secondValue;
-                //break;
-            //case 3: // %
-                //if(second.value == 0) return 0;
-                //return firstValue / secondValue;
-                //break;
-            //case 4: // if
-                //cout << "if called" << endl;
-                //exit(1);
-                //break;
-            //default:
-                //cout << "Something broke" << endl;
-                //exit(1);
-        //}
-        //return 0.0;
-    }
-
-    Agent crossover(Agent p1, Agent p2) {
-        Agent newAgent;
-        vector<GP::Agent::nucleotide> DNA;
-        newAgent.DNA = DNA;
-        return newAgent;
-    }
-
-    void breed() {
-        vector<GP::Agent> tournament;
-        for(int i = 0; i < selectionSize; i++) {
-            tournament.push_back(GP::agents.at(int(rand() % GP::agents.size())));
-        }
-        std::sort(tournament.begin(), tournament.end(), [](GP::Agent one, GP::Agent two){
-            return one.fitness > two.fitness;
-        });
-        Agent newAgent = crossover(tournament.at(0), tournament.at(1));
-        //GP::agents.pop_back();
-        //GP::agents.insert(GP::agents.begin(), newAgent);
     }
 }
 
@@ -349,23 +140,23 @@ int main() {
 
     GP::initPopulation();
 
-    for(int k = 0; k < GP::maxGenerations; k++) {
-        cout << "GENERATION: " << k << endl;
-        // Start of GP stuff
-        GP::classifyAgents(data);
-        GP::fitnessAgents(data);
+    //for(int k = 0; k < GP::maxGenerations; k++) {
+        //cout << "GENERATION: " << k << endl;
+        //// Start of GP stuff
+        //GP::classifyAgents(data);
+        //GP::fitnessAgents(data);
 
-        std::sort(GP::agents.begin(), GP::agents.end(), [](GP::Agent one, GP::Agent two){
-            return one.fitness > two.fitness;
-        });
-        for(int i = 0; i < 10; i++) {
-            cout << "Fitness: " << GP::agents.at(i).fitness << endl;
-        }
-        for(int i = 0; i < GP::numBreed; i++) {
-            GP::breed();
-        }
-        for(auto & a : GP::agents) {
-            a.reset();
-        }
-    }
+        //std::sort(GP::agents.begin(), GP::agents.end(), [](GP::Agent one, GP::Agent two){
+            //return one.fitness > two.fitness;
+        //});
+        //for(int i = 0; i < 10; i++) {
+            //cout << "Fitness: " << GP::agents.at(i).fitness << endl;
+        //}
+        //for(int i = 0; i < GP::numBreed; i++) {
+            //GP::breed();
+        //}
+        //for(auto & a : GP::agents) {
+            //a.reset();
+        //}
+    //}
 }

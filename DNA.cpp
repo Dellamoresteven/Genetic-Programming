@@ -213,36 +213,36 @@ std::ostream& operator<<(std::ostream& os, const DNA* dt) {
 }
 
 
-int main() {
-    srand (time(NULL));
-    Agent * a = new Agent();
-    auto testClassify = [](int c){
-        switch(c) {
-            case 0:
-                return 0;
-            case 1:
-                return 10;
-            case 2:
-                return 20;
-            case 3:
-                return 30;
-            default:
-                return -5;
-        }
-    };
-    //a->calcSimpleFitness([](float x){return false;});
-    a->setRandomDNAStrain([&]() -> gene* {
-        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        if(randNum < .3) {
-            return new gene(false, static_cast<op>(rand()%5), 0);
-        } else if(randNum < (.3 + .15)) {
-            return new gene(false, op::Constant, rand()%20);
-        } else {
-            return new gene(false, op::Feature, rand()%10);
-        }
-    });
-    std::cout << a->dna << std::endl;
-    a->classification([](int featureNumber){
-        return float(featureNumber);
-    });
-}
+//int main() {
+    //srand (time(NULL));
+    //Agent * a = new Agent();
+    //auto testClassify = [](int c){
+        //switch(c) {
+            //case 0:
+                //return 0;
+            //case 1:
+                //return 10;
+            //case 2:
+                //return 20;
+            //case 3:
+                //return 30;
+            //default:
+                //return -5;
+        //}
+    //};
+    ////a->calcSimpleFitness([](float x){return false;});
+    //a->setRandomDNAStrain([&]() -> gene* {
+        //float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        //if(randNum < .3) {
+            //return new gene(false, static_cast<op>(rand()%5), 0);
+        //} else if(randNum < (.3 + .15)) {
+            //return new gene(false, op::Constant, rand()%20);
+        //} else {
+            //return new gene(false, op::Feature, rand()%10);
+        //}
+    //});
+    //std::cout << a->dna << std::endl;
+    //a->classification([](int featureNumber){
+        //return float(featureNumber);
+    //});
+//}

@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "opencv2/opencv.hpp"
+#include "DNA.cpp"
 
 using std::cout;
 using std::endl;
@@ -122,11 +123,85 @@ namespace GP {
     int   minConst       = -100; // Min const
     int   maxConst       = 100;  // Max const
 
-    vector<Agent> agents;
+    vector<Agent*> agents;
 
     void initPopulation() {
         for(int i = 0; i < populationSize; i++) {
+            Agent * newAgent = new Agent();
+            newAgent->setRandomDNAStrain([&](bool isRoot) -> gene* {
+                if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
+                float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+                if(randNum < OpChance) {
+                    return new gene(false, static_cast<op>(rand()%5), 0);
+                } else if(randNum < (OpChance + constChance)) {
+                    return new gene(false, op::Constant, rand()%20);
+                } else {
+                    return new gene(false, op::Feature, rand()%11);
+                }
+            });
+            agents.push_back(newAgent);
+        }
+    }
 
+    void classifyAgents(vector<dataset> data) {
+        for(auto & d : data) {
+            auto featureTranslator = [&](int featureNum) -> float {
+                switch(featureNum) {
+                    case 0:
+                        return d.ABED;
+                    case 1:
+                        return d.BCFE;
+                    case 2:
+                        return d.DEHG;
+                    case 3:
+                        return d.EFIH;
+                    case 4:
+                        return d.GHKJ;
+                    case 5:
+                        return d.HILK;
+                    case 6:
+                        return d.JKNM;
+                    case 7:
+                        return d.KLON;
+                    case 8:
+                        return d.PQSR;
+                    case 9:
+                        return d.RSUT;
+                    case 10:
+                        return d.TUWV;
+                }
+                std::cout << "SOMETHING BROKE HERE1:" << featureNum << std::endl;
+                exit(1);
+            };
+            for(auto & a : agents) {
+                a->classification(featureTranslator);
+            }
+        }
+    }
+
+    void fitnessAgents(vector<dataset> data) {
+        vector<string> answers;
+        for(auto & d : data) {
+            answers.push_back(d.label);
+        }
+        auto fitnessTest = [&](int index, int ans){
+            if(ans >= 0 && answers.at(index) == "ped") {
+                return true;
+            }
+            if(ans < 0 && answers.at(index) == "non-ped") {
+                return true;
+            };
+            return false;
+        };
+
+        for(auto & a : agents) {
+            a->calcSimpleFitness(fitnessTest);
+        }
+    }
+
+    void resetAgents() {
+        for(auto & a : agents) {
+            a->reset();
         }
     }
 }
@@ -140,23 +215,21 @@ int main() {
 
     GP::initPopulation();
 
-    //for(int k = 0; k < GP::maxGenerations; k++) {
-        //cout << "GENERATION: " << k << endl;
-        //// Start of GP stuff
-        //GP::classifyAgents(data);
-        //GP::fitnessAgents(data);
+    for(int k = 0; k < GP::maxGenerations; k++) {
+        cout << "GENERATION: " << k << endl;
+        // Start of GP stuff
+        GP::classifyAgents(data);
+        GP::fitnessAgents(data);
 
-        //std::sort(GP::agents.begin(), GP::agents.end(), [](GP::Agent one, GP::Agent two){
-            //return one.fitness > two.fitness;
-        //});
-        //for(int i = 0; i < 10; i++) {
-            //cout << "Fitness: " << GP::agents.at(i).fitness << endl;
-        //}
+        std::sort(GP::agents.begin(), GP::agents.end(), [](Agent* one, Agent* two){
+            return one->fitness > two->fitness;
+        });
+        for(int i = 0; i < 10; i++) {
+            cout << "Fitness: " << GP::agents.at(i)->fitness << endl;
+        }
         //for(int i = 0; i < GP::numBreed; i++) {
             //GP::breed();
         //}
-        //for(auto & a : GP::agents) {
-            //a.reset();
-        //}
-    //}
+        GP::resetAgents();
+    }
 }

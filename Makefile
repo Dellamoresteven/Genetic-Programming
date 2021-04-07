@@ -9,5 +9,5 @@ all: msg main
 msg:
 	@echo '--- C++20 ---'
 
-main: GP.cpp
+main: GP.cpp DNA.cpp
 	g++-10 ${CXXFLAGS} -O2 -o $@ $< ${OPENCV2FLAGS}

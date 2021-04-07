@@ -45,8 +45,8 @@ class Agent {
         DNA * dna;
 
         Agent() {}
-        Agent(DNA * dna) {
-            dna = dna;
+        Agent(DNA * d) {
+            dna = d;
         }
 
         /**
@@ -60,23 +60,27 @@ class Agent {
                     case Minus:
                     case Mul:
                     case Div:
-                        currGene->l = randomGeneGen();
+                        currGene->l = randomGeneGen(false);
                         rec(currGene->l);
-                        currGene->r = randomGeneGen();
+                        currGene->r = randomGeneGen(false);
                         rec(currGene->r);
                         break;
                     case If:
-                        currGene->l = randomGeneGen();
+                        currGene->l = randomGeneGen(false);
                         rec(currGene->l);
-                        currGene->r = randomGeneGen();
+                        currGene->r = randomGeneGen(false);
                         rec(currGene->r);
-                        currGene->m = randomGeneGen();
+                        currGene->m = randomGeneGen(false);
                         rec(currGene->m);
                         break;
+                    case Constant:
+                        return;
+                    case Feature:
+                        return;
                 }
             };
             DNA * ret = new DNA();
-            ret->gRoot = randomGeneGen();
+            ret->gRoot = randomGeneGen(true);
             rec(ret->gRoot);
             dna = ret;
         }
@@ -124,7 +128,6 @@ class Agent {
             };
             float score = rec(dna->gRoot);
             classifications.push_back(score);
-            std::cout << "Score:" << score << std::endl;
         }
 
         /**
@@ -143,10 +146,12 @@ class Agent {
                 return -1;
             }
             int numCorrect = 0;
+            int i = 0;
             for(const auto & c : classifications) {
-                if(fitnessTest(c)) {
+                if(fitnessTest(i, c)) {
                     numCorrect += 1;
                 }
+                i += 1;
             }
             fitness = float(numCorrect) / float(classifications.size());
             return fitness;

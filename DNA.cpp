@@ -97,6 +97,34 @@ class Agent {
          */
         template <typename T>
         void classification(T featureTranslator) {
+            std::function<float(gene*)> rec = [&](gene * currGene) -> float {
+                switch(currGene->type) {
+                    case Plus:
+                        return rec(currGene->l) + rec(currGene->r);
+                    case Minus:
+                        return rec(currGene->l) - rec(currGene->r);
+                    case Mul:
+                        return rec(currGene->l) * rec(currGene->r);
+                    case Div:
+                        {
+                            float r = rec(currGene->r);
+                            if(r == 0) {
+                                return 0.0;
+                            }
+                            return rec(currGene->l) / float(r);
+                        }
+                    case If:
+                        return (rec(currGene->l) >= 0) ? rec(currGene->m) : rec(currGene->r);
+                    case Feature:
+                        return featureTranslator(currGene->value);
+                    case Constant:
+                        return currGene->value;
+                }
+                return 0.0;
+            };
+            float score = rec(dna->gRoot);
+            classifications.push_back(score);
+            std::cout << "Score:" << score << std::endl;
         }
 
         /**

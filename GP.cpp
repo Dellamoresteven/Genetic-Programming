@@ -111,30 +111,35 @@ void readDataset(vector<dataset> * data) {
 
 namespace GP {
     // Params for evolution
-    int   populationSize = 100;  // Number of agents per round
-    int   selectionSize  = 7;    // Number of agents in the tournament selection
-    int   maxDepth       = 8;    // Max Depth of classification tree
-    int   maxGenerations = 5000; // Max number of generations
-    int   numBreed       = 3;    // Number of new agents during breeding
-    float mutationRate   = .05;  // % mutation rate of DNA
+    int   populationSize = 70;  // Number of agents per round
+    int   selectionSize  = 10;    // Number of agents in the tournament selection
+    int   maxDepth       = 10;    // Max Depth of classification tree
+    int   maxGenerations = 50000; // Max number of generations
+    int   numBreed       = 4;    // Number of new agents during breeding
+    int   numAdopt       = 7;    // Number of new agents to adopt
+    float mutationRate   = .1;  // % mutation rate of DNA
     float OpChance       = 0.40; // Chance of adding an operator to the DNA
-    float constChance    = 0.15; // Chance of adding a constant to the DNA
-    float featureChance  = 0.45; // Chance of adding a feature to the DNA
+    float constChance    = 0.1; // Chance of adding a constant to the DNA
+    float featureChance  = 0.5; // Chance of adding a feature to the DNA
     int   minConst       = -100; // Min const
-    int   maxConst       = 100;  // Max const
+    int   maxConst       = 10;  // Max const
+    int   bestFitness    = 0; // Best fitness
+
+    int orgnumAdopt = numAdopt;
+    int orgmutationRate = mutationRate;
 
     vector<Agent*> agents;
 
-    void initPopulation() {
-        for(int i = 0; i < populationSize; i++) {
+    void initPopulation(int num) {
+        for(int i = 0; i < num; i++) {
             Agent * newAgent = new Agent();
-            newAgent->setRandomDNAStrain([&](bool isRoot) -> gene* {
+            newAgent->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
                 if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
                 float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                if(randNum < OpChance) {
+                if(randNum < OpChance && currDepth < maxDepth) {
                     return new gene(false, static_cast<op>(rand()%5), 0);
                 } else if(randNum < (OpChance + constChance)) {
-                    return new gene(false, op::Constant, rand()%20);
+                    return new gene(false, op::Constant, rand()%maxConst);
                 } else {
                     return new gene(false, op::Feature, rand()%11);
                 }
@@ -205,15 +210,99 @@ namespace GP {
         }
     }
 
+    gene * mutFunc(gene * g) {
+        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        if( g == NULL ) {
+            return NULL;
+        }
+        if(randNum > mutationRate) {
+            return g;
+        }
+        switch(g->type) {
+            case Plus:
+                {
+                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
+                    newGene->l = g->l;
+                    newGene->r = g->r;
+                    if(newGene->type == op::If) {
+                        if(randNum <= mutationRate/2) {
+                            newGene->m = new gene(false, op::Feature, rand()%11);
+                        } else {
+                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
+                        }
+                    }
+                    return newGene;
+                }
+            case Minus:
+                {
+                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
+                    newGene->l = g->l;
+                    newGene->r = g->r;
+                    if(newGene->type == op::If) {
+                        if(randNum <= mutationRate/2) {
+                            newGene->m = new gene(false, op::Feature, rand()%11);
+                        } else {
+                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
+                        }
+                    }
+                    return newGene;
+                }
+            case Mul:
+                {
+                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
+                    newGene->l = g->l;
+                    newGene->r = g->r;
+                    if(newGene->type == op::If) {
+                        if(randNum <= mutationRate/2) {
+                            newGene->m = new gene(false, op::Feature, rand()%11);
+                        } else {
+                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
+                        }
+                    }
+                    return newGene;
+                }
+            case Div:
+                {
+                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
+                    newGene->l = g->l;
+                    newGene->r = g->r;
+                    if(newGene->type == op::If) {
+                        if(randNum <= mutationRate/2) {
+                            newGene->m = new gene(false, op::Feature, rand()%11);
+                        } else {
+                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
+                        }
+                    }
+                    return newGene;
+                }
+            case If:
+                {
+                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
+                    newGene->l = g->l;
+                    newGene->r = g->r;
+                    if(newGene->type != op::If) {
+                        newGene->m = NULL;
+                    }
+                    return newGene;
+                }
+                break;
+            case Feature:
+                g->value = rand()%11;
+            case Constant:
+                g->value = rand()%maxConst;
+        }
+        return g;
+    }
+
     Agent* crossover(Agent * a1, Agent * a2) {
         Agent * newAgent = new Agent();
         DNA * newDNA = new DNA();
         if(rand()%10 > 5) {
-            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutationRate);
-            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutationRate);
+            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFunc);
+            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
         } else {
-            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutationRate);
-            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutationRate);
+            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFunc);
+            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
         }
         newAgent->dna = newDNA;
         return newAgent;
@@ -221,16 +310,19 @@ namespace GP {
 
     void Breed() {
         vector<Agent*> randomAgents;
-        for(int i = 0; i < 1; i++) {
+        agents.resize(agents.size()-(numBreed + numAdopt));
+        for(int i = 0; i < numBreed; i++) {
             for(int j = 0; j < selectionSize; j++) {
-                randomAgents.push_back(agents.at(rand() % populationSize));
+                randomAgents.push_back(agents.at(rand() % agents.size()));
             }
             std::sort(randomAgents.begin(), randomAgents.end(), [](Agent* one, Agent* two){
                 return one->fitness > two->fitness;
             });
-            agents.at(agents.size() - 1) = crossover(randomAgents[0], randomAgents[1]);
+            //agents.at(agents.size() - 1) = crossover(randomAgents[0], randomAgents[1]);
+            agents.push_back(crossover(randomAgents[0], randomAgents[1]));
             randomAgents.clear();
         }
+        initPopulation(numAdopt);
     }
 }
 
@@ -241,7 +333,9 @@ int main() {
     readDataset(&data);
     extractFeatures(&data);
 
-    GP::initPopulation();
+    GP::initPopulation(GP::populationSize);
+
+    int iterSinceLastBest = 1;
 
     for(int k = 0; k < GP::maxGenerations; k++) {
         cout << "GENERATION: " << k << endl;
@@ -252,11 +346,29 @@ int main() {
         std::sort(GP::agents.begin(), GP::agents.end(), [](Agent* one, Agent* two){
             return one->fitness > two->fitness;
         });
-        for(int i = 0; i < 10; i++) {
-            cout << "Fitness: " << GP::agents.at(i)->fitness << endl;
+
+        //cout << "BEST" << GP::bestFitness << endl;
+        //if(GP::agents.at(0)->fitness > GP::bestFitness) {
+            //GP::bestFitness = GP::agents.at(0)->fitness;
+            //GP::mutationRate = GP::orgmutationRate;
+            ////GP::numAdopt = GP::orgnumAdopt;
+            ////iterSinceLastBest = 1;
+        //} else if(iterSinceLastBest % 100 == 0) {
+            //GP::mutationRate += .01;
+        //} else if(iterSinceLastBest % 300 == 0) {
+            //GP::numAdopt += 1;
+        //}
+
+        for(int i = 0; i < 5; i++) {
+            cout << "Best Fitness: " << GP::agents.at(i)->fitness << endl;
         }
-        cout << GP::agents.at(0)->dna << endl;
+        for(int i = 0; i < 5; i++) {
+            cout << "Worst Fitness: " << GP::agents.at(GP::agents.size() - 1 - i)->fitness << endl;
+        }
+        
+        cout << "Mut rate: " << float(GP::mutationRate) << " adoptRate: " << GP::numAdopt << " Last best: " << iterSinceLastBest << endl;
         GP::Breed();
         GP::resetAgents();
+        iterSinceLastBest += 1;
     }
 }

@@ -54,24 +54,24 @@ class Agent {
          */
         template <typename T>
         void setRandomDNAStrain(T randomGeneGen) {
-            std::function<void(gene*)> rec = [&](gene * currGene) -> void {
+            std::function<void(gene*, int)> rec = [&](gene * currGene, int d) -> void {
                 switch(currGene->type) {
                     case Plus:
                     case Minus:
                     case Mul:
                     case Div:
-                        currGene->l = randomGeneGen(false);
-                        rec(currGene->l);
-                        currGene->r = randomGeneGen(false);
-                        rec(currGene->r);
+                        currGene->l = randomGeneGen(false, d+1);
+                        rec(currGene->l, d+1);
+                        currGene->r = randomGeneGen(false, d+1);
+                        rec(currGene->r, d+1);
                         break;
                     case If:
-                        currGene->l = randomGeneGen(false);
-                        rec(currGene->l);
-                        currGene->r = randomGeneGen(false);
-                        rec(currGene->r);
-                        currGene->m = randomGeneGen(false);
-                        rec(currGene->m);
+                        currGene->l = randomGeneGen(false, d+1);
+                        rec(currGene->l, d+1);
+                        currGene->r = randomGeneGen(false, d+1);
+                        rec(currGene->r, d+1);
+                        currGene->m = randomGeneGen(false, d+1);
+                        rec(currGene->m, d+1);
                         break;
                     case Constant:
                         return;
@@ -80,8 +80,8 @@ class Agent {
                 }
             };
             DNA * ret = new DNA();
-            ret->gRoot = randomGeneGen(true);
-            rec(ret->gRoot);
+            ret->gRoot = randomGeneGen(true, 0);
+            rec(ret->gRoot, 0);
             dna = ret;
         }
 
@@ -169,18 +169,19 @@ gene * copyGene( gene * from ) {
     return (new gene(from->root, from->type, from->value));
 }
 
-void copyGeneTree( gene * from, gene *& to, float mutRate ) {
+template<typename T>
+void copyGeneTree( gene * from, gene *& to, T mutFunc ) {
     if(from != NULL) {
         to = copyGene(from);
-        gene * newLeft = copyGene(from->l);
+        gene * newLeft = mutFunc(copyGene(from->l));
         to->l = newLeft;
-        copyGeneTree(from->l, to->l, mutRate);
-        gene * newMiddle = copyGene(from->m);
+        copyGeneTree(from->l, to->l, mutFunc);
+        gene * newMiddle = mutFunc(copyGene(from->m));
         to->m = newMiddle;
-        copyGeneTree(from->m, to->m, mutRate);
-        gene * newRight = copyGene(from->r);
+        copyGeneTree(from->m, to->m, mutFunc);
+        gene * newRight = mutFunc(copyGene(from->r));
         to->r = newRight;
-        copyGeneTree(from->r, to->r, mutRate);
+        copyGeneTree(from->r, to->r, mutFunc);
     }
 }
 

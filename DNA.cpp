@@ -15,9 +15,9 @@ struct gene {
     bool root = false;
     op type;
     float value;
-    gene * l = nullptr;
-    gene * m = nullptr; // Will be null if operator is if
-    gene * r = nullptr;
+    gene * l = NULL;
+    gene * m = NULL; // Will be null if operator is if
+    gene * r = NULL;
 };
 
 class DNA {
@@ -161,6 +161,28 @@ class Agent {
             return fitness;
         }
 };
+
+gene * copyGene( gene * from ) {
+    if(from == NULL) {
+        return NULL;
+    }
+    return (new gene(from->root, from->type, from->value));
+}
+
+void copyGeneTree( gene * from, gene *& to, float mutRate ) {
+    if(from != NULL) {
+        to = copyGene(from);
+        gene * newLeft = copyGene(from->l);
+        to->l = newLeft;
+        copyGeneTree(from->l, to->l, mutRate);
+        gene * newMiddle = copyGene(from->m);
+        to->m = newMiddle;
+        copyGeneTree(from->m, to->m, mutRate);
+        gene * newRight = copyGene(from->r);
+        to->r = newRight;
+        copyGeneTree(from->r, to->r, mutRate);
+    }
+}
 
 std::ostream& operator<<(std::ostream& os, const gene* node) {
     switch(static_cast<int>(node->type)) {

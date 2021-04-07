@@ -114,12 +114,12 @@ namespace GP {
     int   populationSize = 100;  // Number of agents per round
     int   selectionSize  = 7;    // Number of agents in the tournament selection
     int   maxDepth       = 8;    // Max Depth of classification tree
-    int   maxGenerations = 50;   // Max number of generations
+    int   maxGenerations = 5000; // Max number of generations
     int   numBreed       = 3;    // Number of new agents during breeding
     float mutationRate   = .05;  // % mutation rate of DNA
-    float OpChance       = 0.33; // Chance of adding an operator to the DNA
-    float constChance    = 0.33; // Chance of adding a constant to the DNA
-    float featureChance  = 0.33; // Chance of adding a feature to the DNA
+    float OpChance       = 0.40; // Chance of adding an operator to the DNA
+    float constChance    = 0.15; // Chance of adding a constant to the DNA
+    float featureChance  = 0.45; // Chance of adding a feature to the DNA
     int   minConst       = -100; // Min const
     int   maxConst       = 100;  // Max const
 
@@ -204,6 +204,34 @@ namespace GP {
             a->reset();
         }
     }
+
+    Agent* crossover(Agent * a1, Agent * a2) {
+        Agent * newAgent = new Agent();
+        DNA * newDNA = new DNA();
+        if(rand()%10 > 5) {
+            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutationRate);
+            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutationRate);
+        } else {
+            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutationRate);
+            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutationRate);
+        }
+        newAgent->dna = newDNA;
+        return newAgent;
+    }
+
+    void Breed() {
+        vector<Agent*> randomAgents;
+        for(int i = 0; i < 1; i++) {
+            for(int j = 0; j < selectionSize; j++) {
+                randomAgents.push_back(agents.at(rand() % populationSize));
+            }
+            std::sort(randomAgents.begin(), randomAgents.end(), [](Agent* one, Agent* two){
+                return one->fitness > two->fitness;
+            });
+            agents.at(agents.size() - 1) = crossover(randomAgents[0], randomAgents[1]);
+            randomAgents.clear();
+        }
+    }
 }
 
 
@@ -227,9 +255,8 @@ int main() {
         for(int i = 0; i < 10; i++) {
             cout << "Fitness: " << GP::agents.at(i)->fitness << endl;
         }
-        //for(int i = 0; i < GP::numBreed; i++) {
-            //GP::breed();
-        //}
+        cout << GP::agents.at(0)->dna << endl;
+        GP::Breed();
         GP::resetAgents();
     }
 }

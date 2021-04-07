@@ -2,10 +2,16 @@
 #include <iostream>
 #include <time.h>
 #include <vector>
+#include <functional>
 
 enum op { Plus = 0, Minus = 1, Mul = 2, Div = 3, If = 4, Constant = 5, Feature = 6 };
 
 struct gene {
+    gene(bool isRoot, op o, float val) {
+        root  = isRoot;
+        type  = o;
+        value = val;
+    }
     bool root = false;
     op type;
     float value;
@@ -18,64 +24,59 @@ class DNA {
     public:
         gene * gRoot;
 
-        DNA() {
-            gRoot = new gene();
-            gRoot->root = true;
-        }
+        DNA() {}
 
         DNA(gene * pRoot) {
             gRoot = pRoot;
         }
 
         ~DNA() {
-            // @TODO Clean all other genes starting from root.
+            // @TODO Clean up all other genes starting from root.
         }
 };
 
 
 class Agent {
     private:
-        DNA * dna;
-        float fitness;
-        std::vector<float> classifications;
-
 
     public:
+        float fitness;
+        std::vector<float> classifications;
+        DNA * dna;
+
         Agent() {}
         Agent(DNA * dna) {
             dna = dna;
-            srand((unsigned) time(NULL));
         }
 
         /**
          * Builds a random DNA strain
          */
         template <typename T>
-        void setRandomDNAStrain(T randomizationValues) {
-            auto rec = [&](gene * currGene) -> auto {
-                float randNum = static_cast<float> (rand()) / (static_cast<float>(RAND_MAX));
-                gene newGene = randomizationValues(randNum);
-                switch(newGene.type) {
+        void setRandomDNAStrain(T randomGeneGen) {
+            std::function<void(gene*)> rec = [&](gene * currGene) -> void {
+                switch(currGene->type) {
                     case Plus:
-                        break;
                     case Minus:
-                        break;
                     case Mul:
-                        break;
                     case Div:
+                        currGene->l = randomGeneGen();
+                        rec(currGene->l);
+                        currGene->r = randomGeneGen();
+                        rec(currGene->r);
                         break;
                     case If:
+                        currGene->l = randomGeneGen();
+                        rec(currGene->l);
+                        currGene->r = randomGeneGen();
+                        rec(currGene->r);
+                        currGene->m = randomGeneGen();
+                        rec(currGene->m);
                         break;
-                    default:
-                        std::cout << "Something went wrong" << std::endl;
-                        exit(1);
                 }
-                rec(currGene->l);
-                rec(currGene->m);
-                rec(currGene->r);
-                return 0;
             };
             DNA * ret = new DNA();
+            ret->gRoot = randomGeneGen();
             rec(ret->gRoot);
             dna = ret;
         }
@@ -128,14 +129,64 @@ class Agent {
         }
 };
 
+std::ostream& operator<<(std::ostream& os, const gene* node) {
+    switch(static_cast<int>(node->type)) {
+        case Plus:
+            os << "+";
+            break;
+        case Minus:
+            os << "-";
+            break;
+        case Mul:
+            os << "*";
+            break;
+        case Div:
+            os << "%";
+            break;
+        case If:
+            os << "If";
+            break;
+        case Constant:
+            os << node->value;
+            break;
+        case Feature:
+            os << "F" << node->value;
+            break;
+    }
+    return os;
+}
+
 /**
  * DNA print override
  */
-std::ostream& operator<<(std::ostream& os, const DNA& dt) {
+std::ostream& operator<<(std::ostream& os, const DNA* dt) {
+    int depth = 0;
+    std::vector<gene*> nodeList;
+    nodeList.push_back(dt->gRoot);
+    while(nodeList.size() != 0) {
+        std::vector<gene*> newNodeList;
+        for(const auto & node : nodeList) {
+            os << node << " ";
+            if(node->l != nullptr) {
+                newNodeList.push_back(node->l);
+            }
+            if(node->m != nullptr) {
+                newNodeList.push_back(node->m);
+            }
+            if(node->r != nullptr) {
+                newNodeList.push_back(node->r);
+            }
+        }
+        nodeList = newNodeList;
+        os << std::endl;
+        depth += 1;
+    }
+    return os;
 }
 
 
 int main() {
+    srand (time(NULL));
     Agent * a = new Agent();
     auto testClassify = [](int c){
         switch(c) {
@@ -151,5 +202,19 @@ int main() {
                 return -5;
         }
     };
-    a->calcSimpleFitness([](float x){return false;});
+    //a->calcSimpleFitness([](float x){return false;});
+    a->setRandomDNAStrain([&]() -> gene* {
+        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        if(randNum < .3) {
+            return new gene(false, static_cast<op>(rand()%5), 0);
+        } else if(randNum < (.3 + .15)) {
+            return new gene(false, op::Constant, rand()%20);
+        } else {
+            return new gene(false, op::Feature, rand()%10);
+        }
+    });
+    std::cout << a->dna << std::endl;
+    a->classification([](int featureNumber){
+        return float(featureNumber);
+    });
 }

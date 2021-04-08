@@ -100,7 +100,7 @@ class Agent {
          *        the real feature value.
          */
         template <typename T>
-        void classification(T featureTranslator) {
+        float classification(T featureTranslator) {
             std::function<float(gene*)> rec = [&](gene * currGene) -> float {
                 switch(currGene->type) {
                     case Plus:
@@ -120,7 +120,8 @@ class Agent {
                     case If:
                         return (rec(currGene->l) >= 0) ? rec(currGene->m) : rec(currGene->r);
                     case Feature:
-                        return featureTranslator(currGene->value);
+                        std::cout << featureTranslator.replaceFeature(currGene->value) << std::endl;
+                        return featureTranslator.replaceFeature(currGene->value);
                     case Constant:
                         return currGene->value;
                 }
@@ -128,6 +129,7 @@ class Agent {
             };
             float score = rec(dna->gRoot);
             classifications.push_back(score);
+            return score;
         }
 
         /**
@@ -154,6 +156,36 @@ class Agent {
                 i += 1;
             }
             fitness = float(numCorrect) / float(classifications.size());
+            return fitness;
+        }
+
+        template<typename T>
+        float calcAverageFitness(T fitnessTest) {
+            if(classifications.size() == 0) {
+                std::cout << "DNA: Classifications is 0" << std::endl;
+                return -1;
+            }
+            int TP = 0, TN = 0, FN = 0, FP = 0;
+            int i = 0;
+            for(const auto & c : classifications) {
+                switch(fitnessTest(i, c)) {
+                    case 0:
+                        TP += 1;
+                        break;
+                    case 1:
+                        TN += 1;
+                        break;
+                    case 2:
+                        FN += 1;
+                        break;
+                    case 3:
+                        FP += 1;
+                        break;
+                }
+                i += 1;
+            }
+            //fitness = float(numCorrect) / float(classifications.size());
+            fitness = ((float(TP)/(TP+FN)) + (float(TN)/(TN+FP))) / 2;
             return fitness;
         }
 

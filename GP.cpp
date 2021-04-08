@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <ctime>
+#include <limits>
 #include "opencv2/opencv.hpp"
 #include "DNA.cpp"
 
@@ -91,7 +92,7 @@ void extractFeatures(vector<dataset> * data) {
     }
 }
 
-void readDataset(vector<dataset> * data) {
+void readDataset(vector<dataset> * data, bool isTraining) {
     auto readFunc = [&](string dir, string label) {
         for(const auto & entry : fs::directory_iterator(dir)) {
             dataset d;
@@ -101,27 +102,29 @@ void readDataset(vector<dataset> * data) {
             data->push_back(d);
         }
     };
-    readFunc("./data/1/ped_examples/", "ped");
-    readFunc("./data/1/non-ped_examples/", "non-ped");
-    //readFunc("./data/2/ped_examples/", "ped");
-    //readFunc("./data/2/non-ped_examples/", "non-ped");
-    //readFunc("./data/3/ped_examples/", "ped");
-    //readFunc("./data/3/non-ped_examples/", "non-ped");
+    if(isTraining) {
+        readFunc("./data/1/ped_examples/", "ped");
+        readFunc("./data/1/non-ped_examples/", "non-ped");
+        //readFunc("./data/2/ped_examples/", "ped");
+        //readFunc("./data/2/non-ped_examples/", "non-ped");
+    } else {
+        readFunc("./data/3/ped_examples/", "ped");
+        readFunc("./data/3/non-ped_examples/", "non-ped");
+    }
 }
 
 namespace GP {
     // Params for evolution
-    int   populationSize = 70;  // Number of agents per round
+    int   populationSize = 200;  // Number of agents per round
     int   selectionSize  = 10;    // Number of agents in the tournament selection
     int   maxDepth       = 10;    // Max Depth of classification tree
-    int   maxGenerations = 50000; // Max number of generations
-    int   numBreed       = 4;    // Number of new agents during breeding
-    int   numAdopt       = 7;    // Number of new agents to adopt
+    int   maxGenerations = 100; // Max number of generations
+    int   numBreed       = 10;    // Number of new agents during breeding
+    int   numAdopt       = 10;    // Number of new agents to adopt
     float mutationRate   = .1;  // % mutation rate of DNA
     float OpChance       = 0.40; // Chance of adding an operator to the DNA
     float constChance    = 0.1; // Chance of adding a constant to the DNA
     float featureChance  = 0.5; // Chance of adding a feature to the DNA
-    int   minConst       = -100; // Min const
     int   maxConst       = 10;  // Max const
     int   bestFitness    = 0; // Best fitness
 
@@ -150,36 +153,8 @@ namespace GP {
 
     void classifyAgents(vector<dataset> data) {
         for(auto & d : data) {
-            auto featureTranslator = [&](int featureNum) -> float {
-                switch(featureNum) {
-                    case 0:
-                        return d.ABED;
-                    case 1:
-                        return d.BCFE;
-                    case 2:
-                        return d.DEHG;
-                    case 3:
-                        return d.EFIH;
-                    case 4:
-                        return d.GHKJ;
-                    case 5:
-                        return d.HILK;
-                    case 6:
-                        return d.JKNM;
-                    case 7:
-                        return d.KLON;
-                    case 8:
-                        return d.PQSR;
-                    case 9:
-                        return d.RSUT;
-                    case 10:
-                        return d.TUWV;
-                }
-                std::cout << "SOMETHING BROKE HERE1:" << featureNum << std::endl;
-                exit(1);
-            };
             for(auto & a : agents) {
-                a->classification(featureTranslator);
+                a->classification(d);
             }
         }
     }
@@ -199,8 +174,21 @@ namespace GP {
             return false;
         };
 
+        auto fitnessAverageTest = [&](int index, int ans){
+            if(ans >= 0 && answers.at(index) == "ped") {
+                return 0; // TP
+            }
+            if(ans < 0 && answers.at(index) == "non-ped") {
+                return 1; // TN
+            };
+            if(ans < 0)
+                return 2; // FN
+            return 3; // FT
+        };
+
         for(auto & a : agents) {
             a->calcSimpleFitness(fitnessTest);
+            //a->calcAverageFitness(fitnessAverageTest);
         }
     }
 
@@ -326,11 +314,28 @@ namespace GP {
     }
 }
 
+void testTopAgent(Agent * a) {
+    vector<dataset> data;
+    readDataset(&data, false);
+    int correct = 1;
+    for(const auto & d : data) {
+        float score = a->classification(d);
+        cout << "SCORE: " << score << endl;
+        if(score == -1*std::numeric_limits<double>::infinity()) {
+            cout <<"FEAWFEAWFWEA" << endl;
+        }
+        if((score >= 0 && d.label == "ped") || (score < 0 && d.label == "non-ped")) {
+            correct += 1;
+        }
+    }
+    cout << "Test Acc: " << correct << " / " << data.size() << endl;
+}
+
 
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     vector<dataset> data;
-    readDataset(&data);
+    readDataset(&data, true);
     extractFeatures(&data);
 
     GP::initPopulation(GP::populationSize);
@@ -347,28 +352,18 @@ int main() {
             return one->fitness > two->fitness;
         });
 
-        //cout << "BEST" << GP::bestFitness << endl;
-        //if(GP::agents.at(0)->fitness > GP::bestFitness) {
-            //GP::bestFitness = GP::agents.at(0)->fitness;
-            //GP::mutationRate = GP::orgmutationRate;
-            ////GP::numAdopt = GP::orgnumAdopt;
-            ////iterSinceLastBest = 1;
-        //} else if(iterSinceLastBest % 100 == 0) {
-            //GP::mutationRate += .01;
-        //} else if(iterSinceLastBest % 300 == 0) {
-            //GP::numAdopt += 1;
-        //}
-
         for(int i = 0; i < 5; i++) {
             cout << "Best Fitness: " << GP::agents.at(i)->fitness << endl;
         }
         for(int i = 0; i < 5; i++) {
             cout << "Worst Fitness: " << GP::agents.at(GP::agents.size() - 1 - i)->fitness << endl;
         }
-        
-        cout << "Mut rate: " << float(GP::mutationRate) << " adoptRate: " << GP::numAdopt << " Last best: " << iterSinceLastBest << endl;
+        cout << GP::agents.at(0)->dna << endl;
+        cout << "Mut rate: " << float(GP::mutationRate) << " adoptRate: " << GP::numAdopt << endl;
         GP::Breed();
         GP::resetAgents();
         iterSinceLastBest += 1;
     }
+
+    testTopAgent(GP::agents.at(0));
 }

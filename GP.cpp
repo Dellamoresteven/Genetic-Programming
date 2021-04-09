@@ -22,42 +22,76 @@ struct dataset {
     string label;
 
     // ROI's in the research paper
-    float ABED;
-    float BCFE;
-    float DEHG;
-    float EFIH;
-    float GHKJ;
-    float HILK;
-    float JKNM;
-    float KLON;
-    float PQSR;
-    float RSUT;
-    float TUWV;
+    float ABEDmean;
+    float BCFEmean;
+    float DEHGmean;
+    float EFIHmean;
+    float GHKJmean;
+    float HILKmean;
+    float JKNMmean;
+    float KLONmean;
+    float PQSRmean;
+    float RSUTmean;
+    float TUWVmean;
+
+    float ABEDstd;
+    float BCFEstd;
+    float DEHGstd;
+    float EFIHstd;
+    float GHKJstd;
+    float HILKstd;
+    float JKNMstd;
+    float KLONstd;
+    float PQSRstd;
+    float RSUTstd;
+    float TUWVstd;
 
     float replaceFeature(int featureToReplace) {
         switch(featureToReplace) {
             case 0:
-                return ABED;
+                return ABEDmean;
             case 1:
-                return BCFE;
+                return BCFEmean;
             case 2:
-                return DEHG;
+                return DEHGmean;
             case 3:
-                return EFIH;
+                return EFIHmean;
             case 4:
-                return GHKJ;
+                return GHKJmean;
             case 5:
-                return HILK;
+                return HILKmean;
             case 6:
-                return JKNM;
+                return JKNMmean;
             case 7:
-                return KLON;
+                return KLONmean;
             case 8:
-                return PQSR;
+                return PQSRmean;
             case 9:
-                return RSUT;
+                return RSUTmean;
             case 10:
-                return TUWV;
+                return TUWVmean;
+            case 11:
+                return ABEDstd;
+            case 12:
+                return BCFEstd;
+            case 13:
+                return DEHGstd;
+            case 14:
+                return EFIHstd;
+            case 15:
+                return GHKJstd;
+            case 16:
+                return HILKstd;
+            case 17:
+                return JKNMstd;
+            case 18:
+                return KLONstd;
+            case 19:
+                return PQSRstd;
+            case 20:
+                return RSUTstd;
+            case 21:
+                return TUWVstd;
             default:
                 cout << "feature to large" << endl;
                 exit(1);
@@ -70,25 +104,26 @@ void extractFeatures(vector<dataset> * data) {
     int rows = data->at(0).img.rows;
     int cols = data->at(0).img.cols;
 
-    auto MeanROICalc = [](Mat i, int x1, int x2, int y1, int y2) {
+    auto MeanROICalc = [](Mat i, int x1, int x2, int y1, int y2, float& m, float& s) {
         cv::Scalar mean, stddev;
         cv::meanStdDev(i(cv::Range(x1, x2), cv::Range(y1, y2)), mean, stddev);
-        return mean[0];
+        m = mean[0];
+        s = stddev[0];
     };
 
     for(auto & entry : *data) {
         // Set up ROI's in the research paper
-        entry.ABED = MeanROICalc(entry.img,0,rows/4,0,cols/2);
-        entry.BCFE = MeanROICalc(entry.img,0,rows/4,cols/2, cols);
-        entry.DEHG = MeanROICalc(entry.img,rows/4,rows/2,0,cols/2);
-        entry.EFIH = MeanROICalc(entry.img,rows/4, rows/2,cols/2, cols);
-        entry.GHKJ = MeanROICalc(entry.img,rows/2, 3*rows/4,0, cols/2);
-        entry.HILK = MeanROICalc(entry.img,rows/2, 3*rows/4,cols/2, cols);
-        entry.JKNM = MeanROICalc(entry.img,3*rows/4, rows,0, cols/2);
-        entry.KLON = MeanROICalc(entry.img,3*rows/4, rows,cols/2, cols);
-        entry.PQSR = MeanROICalc(entry.img,0, rows/4,cols/3, 2*cols/3);
-        entry.RSUT = MeanROICalc(entry.img,rows/4, (3*rows/4)-2,cols/3, 2*cols/3);
-        entry.TUWV = MeanROICalc(entry.img,(3*rows/4)-2, rows-2,cols/3, 2*cols/3);
+        MeanROICalc(entry.img,0,rows/4,0,cols/2, entry.ABEDmean, entry.ABEDstd);
+        MeanROICalc(entry.img,0,rows/4,cols/2, cols, entry.BCFEmean, entry.BCFEstd);
+        MeanROICalc(entry.img,rows/4,rows/2,0,cols/2, entry.DEHGmean, entry.DEHGstd);
+        MeanROICalc(entry.img,rows/4, rows/2,cols/2, cols, entry.EFIHmean, entry.EFIHstd);
+        MeanROICalc(entry.img,rows/2, 3*rows/4,0, cols/2, entry.GHKJmean, entry.GHKJmean);
+        MeanROICalc(entry.img,rows/2, 3*rows/4,cols/2, cols, entry.HILKmean, entry.HILKstd);
+        MeanROICalc(entry.img,3*rows/4, rows,0, cols/2, entry.JKNMmean, entry.JKNMstd);
+        MeanROICalc(entry.img,3*rows/4, rows,cols/2, cols, entry.KLONmean, entry.KLONstd);
+        MeanROICalc(entry.img,0, rows/4,cols/3, 2*cols/3, entry.PQSRmean, entry.PQSRstd);
+        MeanROICalc(entry.img,rows/4, (3*rows/4)-2,cols/3, 2*cols/3, entry.RSUTmean, entry.RSUTstd);
+        MeanROICalc(entry.img,(3*rows/4)-2, rows-2,cols/3, 2*cols/3, entry.TUWVmean, entry.TUWVstd);
     }
 }
 
@@ -126,70 +161,20 @@ namespace GP {
     float constChance    = 0.1; // Chance of adding a constant to the DNA
     float featureChance  = 0.5; // Chance of adding a feature to the DNA
     int   maxConst       = 10;  // Max const
-    int   bestFitness    = 0; // Best fitness
+    int   bestFitness    = 0; // Best fitness of all gens
 
     int orgnumAdopt = numAdopt;
     int orgmutationRate = mutationRate;
 
-    vector<Agent*> agents;
+    vector<std::unique_ptr<Agent>> agents;
 
     void initPopulation(int num) {
-        for(int i = 0; i < num; i++) {
-            Agent * newAgent = new Agent();
-            newAgent->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
-                if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
-                float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                if(randNum < OpChance && currDepth < maxDepth) {
-                    return new gene(false, static_cast<op>(rand()%5), 0);
-                } else if(randNum < (OpChance + constChance)) {
-                    return new gene(false, op::Constant, rand()%maxConst);
-                } else {
-                    return new gene(false, op::Feature, rand()%11);
-                }
-            });
-            agents.push_back(newAgent);
-        }
     }
 
     void classifyAgents(vector<dataset> data) {
-        for(auto & d : data) {
-            for(auto & a : agents) {
-                a->classification(d);
-            }
-        }
     }
 
     void fitnessAgents(vector<dataset> data) {
-        vector<string> answers;
-        for(auto & d : data) {
-            answers.push_back(d.label);
-        }
-        auto fitnessTest = [&](int index, int ans){
-            if(ans >= 0 && answers.at(index) == "ped") {
-                return true;
-            }
-            if(ans < 0 && answers.at(index) == "non-ped") {
-                return true;
-            };
-            return false;
-        };
-
-        auto fitnessAverageTest = [&](int index, int ans){
-            if(ans >= 0 && answers.at(index) == "ped") {
-                return 0; // TP
-            }
-            if(ans < 0 && answers.at(index) == "non-ped") {
-                return 1; // TN
-            };
-            if(ans < 0)
-                return 2; // FN
-            return 3; // FT
-        };
-
-        for(auto & a : agents) {
-            a->calcSimpleFitness(fitnessTest);
-            //a->calcAverageFitness(fitnessAverageTest);
-        }
     }
 
     void resetAgents() {
@@ -198,137 +183,14 @@ namespace GP {
         }
     }
 
-    gene * mutFunc(gene * g) {
-        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        if( g == NULL ) {
-            return NULL;
-        }
-        if(randNum > mutationRate) {
-            return g;
-        }
-        switch(g->type) {
-            case Plus:
-                {
-                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
-                    newGene->l = g->l;
-                    newGene->r = g->r;
-                    if(newGene->type == op::If) {
-                        if(randNum <= mutationRate/2) {
-                            newGene->m = new gene(false, op::Feature, rand()%11);
-                        } else {
-                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
-                        }
-                    }
-                    return newGene;
-                }
-            case Minus:
-                {
-                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
-                    newGene->l = g->l;
-                    newGene->r = g->r;
-                    if(newGene->type == op::If) {
-                        if(randNum <= mutationRate/2) {
-                            newGene->m = new gene(false, op::Feature, rand()%11);
-                        } else {
-                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
-                        }
-                    }
-                    return newGene;
-                }
-            case Mul:
-                {
-                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
-                    newGene->l = g->l;
-                    newGene->r = g->r;
-                    if(newGene->type == op::If) {
-                        if(randNum <= mutationRate/2) {
-                            newGene->m = new gene(false, op::Feature, rand()%11);
-                        } else {
-                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
-                        }
-                    }
-                    return newGene;
-                }
-            case Div:
-                {
-                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
-                    newGene->l = g->l;
-                    newGene->r = g->r;
-                    if(newGene->type == op::If) {
-                        if(randNum <= mutationRate/2) {
-                            newGene->m = new gene(false, op::Feature, rand()%11);
-                        } else {
-                            newGene->m = new gene(false, op::Constant, rand()%maxConst);
-                        }
-                    }
-                    return newGene;
-                }
-            case If:
-                {
-                    gene * newGene = new gene(g->root, static_cast<op>(rand()%5), 0);
-                    newGene->l = g->l;
-                    newGene->r = g->r;
-                    if(newGene->type != op::If) {
-                        newGene->m = NULL;
-                    }
-                    return newGene;
-                }
-                break;
-            case Feature:
-                g->value = rand()%11;
-            case Constant:
-                g->value = rand()%maxConst;
-        }
-        return g;
+    std::unique_ptr<gene> mutFunc(std::unique_ptr<gene> g) {
     }
 
     Agent* crossover(Agent * a1, Agent * a2) {
-        Agent * newAgent = new Agent();
-        DNA * newDNA = new DNA();
-        if(rand()%10 > 5) {
-            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFunc);
-            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
-        } else {
-            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFunc);
-            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
-        }
-        newAgent->dna = newDNA;
-        return newAgent;
     }
 
     void Breed() {
-        vector<Agent*> randomAgents;
-        agents.resize(agents.size()-(numBreed + numAdopt));
-        for(int i = 0; i < numBreed; i++) {
-            for(int j = 0; j < selectionSize; j++) {
-                randomAgents.push_back(agents.at(rand() % agents.size()));
-            }
-            std::sort(randomAgents.begin(), randomAgents.end(), [](Agent* one, Agent* two){
-                return one->fitness > two->fitness;
-            });
-            //agents.at(agents.size() - 1) = crossover(randomAgents[0], randomAgents[1]);
-            agents.push_back(crossover(randomAgents[0], randomAgents[1]));
-            randomAgents.clear();
-        }
-        initPopulation(numAdopt);
     }
-}
-
-void testTopAgent(Agent * a) {
-    vector<dataset> data;
-    readDataset(&data, false);
-    int correct = 1;
-    for(const auto & d : data) {
-        float score = a->classification(d);
-        cout << "SCORE: " << score << endl;
-        if(score == -1*std::numeric_limits<double>::infinity()) {
-            cout <<"FEAWFEAWFWEA" << endl;
-        }
-        if((score >= 0 && d.label == "ped") || (score < 0 && d.label == "non-ped")) {
-            correct += 1;
-        }
-    }
-    cout << "Test Acc: " << correct << " / " << data.size() << endl;
 }
 
 
@@ -337,33 +199,4 @@ int main() {
     vector<dataset> data;
     readDataset(&data, true);
     extractFeatures(&data);
-
-    GP::initPopulation(GP::populationSize);
-
-    int iterSinceLastBest = 1;
-
-    for(int k = 0; k < GP::maxGenerations; k++) {
-        cout << "GENERATION: " << k << endl;
-        // Start of GP stuff
-        GP::classifyAgents(data);
-        GP::fitnessAgents(data);
-
-        std::sort(GP::agents.begin(), GP::agents.end(), [](Agent* one, Agent* two){
-            return one->fitness > two->fitness;
-        });
-
-        for(int i = 0; i < 5; i++) {
-            cout << "Best Fitness: " << GP::agents.at(i)->fitness << endl;
-        }
-        for(int i = 0; i < 5; i++) {
-            cout << "Worst Fitness: " << GP::agents.at(GP::agents.size() - 1 - i)->fitness << endl;
-        }
-        cout << GP::agents.at(0)->dna << endl;
-        cout << "Mut rate: " << float(GP::mutationRate) << " adoptRate: " << GP::numAdopt << endl;
-        GP::Breed();
-        GP::resetAgents();
-        iterSinceLastBest += 1;
-    }
-
-    testTopAgent(GP::agents.at(0));
 }

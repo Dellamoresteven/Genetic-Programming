@@ -2,6 +2,7 @@
 #include <iostream>
 #include <time.h>
 #include <vector>
+#include <memory>
 #include <functional>
 
 enum op { Plus = 0, Minus = 1, Mul = 2, Div = 3, If = 4, Constant = 5, Feature = 6 };
@@ -15,20 +16,20 @@ struct gene {
     bool root = false;
     op type;
     float value;
-    gene * l = NULL;
-    gene * m = NULL; // Will be null if operator is if
-    gene * r = NULL;
+    std::unique_ptr<gene> l = NULL;
+    std::unique_ptr<gene> m = NULL; // Will be null if operator is if
+    std::unique_ptr<gene> r = NULL;
 };
 
 class DNA {
     public:
-        gene * gRoot;
+        std::unique_ptr<gene> gRoot;
 
         DNA() {}
 
-        DNA(gene * pRoot) {
-            gRoot = pRoot;
-        }
+        //DNA(std::unique_ptr<gene> pRoot) {
+            //gRoot = pRoot;
+        //}
 
         ~DNA() {
             // @TODO Clean up all other genes starting from root.
@@ -54,7 +55,7 @@ class Agent {
          */
         template <typename T>
         void setRandomDNAStrain(T randomGeneGen) {
-            std::function<void(gene*, int)> rec = [&](gene * currGene, int d) -> void {
+            std::function<void(std::unique_ptr<gene>, int)> rec = [&](std::unique_ptr<gene> currGene, int d) -> void {
                 switch(currGene->type) {
                     case Plus:
                     case Minus:
@@ -101,7 +102,7 @@ class Agent {
          */
         template <typename T>
         float classification(T featureTranslator) {
-            std::function<float(gene*)> rec = [&](gene * currGene) -> float {
+            std::function<float(std::unique_ptr<gene>)> rec = [&](std::unique_ptr<gene> currGene) -> float {
                 switch(currGene->type) {
                     case Plus:
                         return rec(currGene->l) + rec(currGene->r);
@@ -194,30 +195,30 @@ class Agent {
         }
 };
 
-gene * copyGene( gene * from ) {
+std::unique_ptr<gene> copyGene( std::unique_ptr<gene> from ) {
     if(from == NULL) {
         return NULL;
     }
-    return (new gene(from->root, from->type, from->value));
+    return std::unique_ptr<gene>(new gene(from->root, from->type, from->value));
 }
 
 template<typename T>
-void copyGeneTree( gene * from, gene *& to, T mutFunc ) {
+void copyGeneTree( std::unique_ptr<gene> from, std::unique_ptr<gene>& to, T mutFunc ) {
     if(from != NULL) {
         to = copyGene(from);
-        gene * newLeft = mutFunc(copyGene(from->l));
+        std::unique_ptr<gene> newLeft = mutFunc(copyGene(from->l));
         to->l = newLeft;
         copyGeneTree(from->l, to->l, mutFunc);
-        gene * newMiddle = mutFunc(copyGene(from->m));
+        std::unique_ptr<gene> newMiddle = mutFunc(copyGene(from->m));
         to->m = newMiddle;
         copyGeneTree(from->m, to->m, mutFunc);
-        gene * newRight = mutFunc(copyGene(from->r));
+        std::unique_ptr<gene> newRight = mutFunc(copyGene(from->r));
         to->r = newRight;
         copyGeneTree(from->r, to->r, mutFunc);
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const gene* node) {
+std::ostream& operator<<(std::ostream& os, const std::unique_ptr<gene> node) {
     switch(static_cast<int>(node->type)) {
         case Plus:
             os << "+";
@@ -249,20 +250,20 @@ std::ostream& operator<<(std::ostream& os, const gene* node) {
  */
 std::ostream& operator<<(std::ostream& os, const DNA* dt) {
     int depth = 0;
-    std::vector<gene*> nodeList;
-    nodeList.push_back(dt->gRoot);
+    std::vector<std::unique_ptr<gene>::pointer> nodeList;
+    nodeList.push_back(dt->gRoot.get());
     while(nodeList.size() != 0) {
-        std::vector<gene*> newNodeList;
+        std::vector< std::unique_ptr<gene>::pointer > newNodeList;
         for(const auto & node : nodeList) {
             os << node << " ";
             if(node->l != nullptr) {
-                newNodeList.push_back(node->l);
+                newNodeList.push_back(node->l.get());
             }
             if(node->m != nullptr) {
-                newNodeList.push_back(node->m);
+                newNodeList.push_back(node->m.get());
             }
             if(node->r != nullptr) {
-                newNodeList.push_back(node->r);
+                newNodeList.push_back(node->r.get());
             }
         }
         nodeList = newNodeList;

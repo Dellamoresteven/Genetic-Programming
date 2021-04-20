@@ -131,7 +131,7 @@ void readDataset(vector<dataset> * data, bool isTraining) {
     auto readFunc = [&](string dir, string label) {
         for(const auto & entry : fs::directory_iterator(dir)) {
             dataset d;
-            d.img = imread(entry.path(), IMREAD_GRAYSCALE);
+            d.img = imread((string) entry.path(), IMREAD_GRAYSCALE);
             d.image_path = entry.path();
             d.label = label;
             data->push_back(d);
@@ -169,6 +169,20 @@ namespace GP {
     vector<std::unique_ptr<Agent>> agents;
 
     void initPopulation(int num) {
+        for(int i = 0; i < populationSize; i++) {
+            agents.push_back(std::make_unique<Agent>(Agent()));
+            agents.at(agents.size())->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
+                if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
+                float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+                if(randNum < OpChance && currDepth < maxDepth) {
+                    return new gene(false, static_cast<op>(rand()%5), 0);
+                } else if(randNum < (OpChance + constChance)) {
+                    return new gene(false, op::Constant, rand()%maxConst);
+                } else {
+                    return new gene(false, op::Feature, rand()%11);
+                }
+            });
+        }
     }
 
     void classifyAgents(vector<dataset> data) {

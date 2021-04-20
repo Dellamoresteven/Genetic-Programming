@@ -13,11 +13,20 @@ struct gene {
         type  = o;
         value = val;
     }
+
+    gene(bool isRoot, op o, float val, gene* le, gene* mi, gene* ri) {
+        root  = isRoot;
+        type  = o;
+        value = val;
+        l.reset(le);
+        m.reset(mi);
+        r.reset(ri);
+    }
     bool root = false;
     op type;
     float value;
     std::unique_ptr<gene> l = NULL;
-    std::unique_ptr<gene> m = NULL; // Will be null if operator is if
+    std::unique_ptr<gene> m = NULL; // Will not be null if operator is if
     std::unique_ptr<gene> r = NULL;
 };
 
@@ -43,35 +52,32 @@ class Agent {
     public:
         float fitness;
         std::vector<float> classifications;
-        DNA * dna;
+        std::unique_ptr<DNA> dna = nullptr;
 
         Agent() {}
-        Agent(DNA * d) {
-            dna = d;
-        }
 
         /**
          * Builds a random DNA strain
          */
-        template <typename T>
-        void setRandomDNAStrain(T randomGeneGen) {
-            std::function<void(std::unique_ptr<gene>, int)> rec = [&](std::unique_ptr<gene> currGene, int d) -> void {
+        //template <typename T>
+        void setRandomDNAStrain(std::function<gene*(bool, int)> randomGeneGen) {
+            std::function<void(std::unique_ptr<gene>&, int)> rec = [&](std::unique_ptr<gene>& currGene, int d) -> void {
                 switch(currGene->type) {
                     case Plus:
                     case Minus:
                     case Mul:
                     case Div:
-                        currGene->l = randomGeneGen(false, d+1);
+                        currGene->l.reset(randomGeneGen(false, d+1));
                         rec(currGene->l, d+1);
-                        currGene->r = randomGeneGen(false, d+1);
+                        currGene->r.reset(randomGeneGen(false, d+1));
                         rec(currGene->r, d+1);
                         break;
                     case If:
-                        currGene->l = randomGeneGen(false, d+1);
+                        currGene->l.reset(randomGeneGen(false, d+1));
                         rec(currGene->l, d+1);
-                        currGene->r = randomGeneGen(false, d+1);
+                        currGene->r.reset(randomGeneGen(false, d+1));
                         rec(currGene->r, d+1);
-                        currGene->m = randomGeneGen(false, d+1);
+                        currGene->m.reset(randomGeneGen(false, d+1));
                         rec(currGene->m, d+1);
                         break;
                     case Constant:
@@ -81,9 +87,9 @@ class Agent {
                 }
             };
             DNA * ret = new DNA();
-            ret->gRoot = randomGeneGen(true, 0);
+            ret->gRoot.reset(randomGeneGen(true, 0));
             rec(ret->gRoot, 0);
-            dna = ret;
+            dna.reset(ret);
         }
 
         /**
@@ -100,9 +106,9 @@ class Agent {
          * @param featureTranslator is a function that takes in a feature int and returns
          *        the real feature value.
          */
-        template <typename T>
-        float classification(T featureTranslator) {
-            std::function<float(std::unique_ptr<gene>)> rec = [&](std::unique_ptr<gene> currGene) -> float {
+        //template <typename T>
+        float classification(std::function<float(int)> featureTranslator) {
+            std::function<float(std::unique_ptr<gene>&)> rec = [&](std::unique_ptr<gene>& currGene) -> float {
                 switch(currGene->type) {
                     case Plus:
                         return rec(currGene->l) + rec(currGene->r);
@@ -121,8 +127,7 @@ class Agent {
                     case If:
                         return (rec(currGene->l) >= 0) ? rec(currGene->m) : rec(currGene->r);
                     case Feature:
-                        std::cout << featureTranslator.replaceFeature(currGene->value) << std::endl;
-                        return featureTranslator.replaceFeature(currGene->value);
+                        return featureTranslator(currGene->value);
                     case Constant:
                         return currGene->value;
                 }
@@ -195,25 +200,22 @@ class Agent {
         }
 };
 
-std::unique_ptr<gene> copyGene( std::unique_ptr<gene> from ) {
+gene* copyGene( std::unique_ptr<gene> from ) {
     if(from == NULL) {
         return NULL;
     }
-    return std::unique_ptr<gene>(new gene(from->root, from->type, from->value));
+    return (new gene(from->root, from->type, from->value, from->l.get(), from->m.get(), from->r.get()));
 }
 
 template<typename T>
 void copyGeneTree( std::unique_ptr<gene> from, std::unique_ptr<gene>& to, T mutFunc ) {
     if(from != NULL) {
-        to = copyGene(from);
-        std::unique_ptr<gene> newLeft = mutFunc(copyGene(from->l));
-        to->l = newLeft;
+        to = std::make_unique<gene>(copyGene(from));
+        //to->l = std::make_unique<gene>(mutFunc(copyGene(from->l)));
         copyGeneTree(from->l, to->l, mutFunc);
-        std::unique_ptr<gene> newMiddle = mutFunc(copyGene(from->m));
-        to->m = newMiddle;
+        //to->m = std::make_unique<gene>(mutFunc(copyGene(from->m)));
         copyGeneTree(from->m, to->m, mutFunc);
-        std::unique_ptr<gene> newRight = mutFunc(copyGene(from->r));
-        to->r = newRight;
+        //to->r = std::make_unique<gene>(mutFunc(copyGene(from->r)));
         copyGeneTree(from->r, to->r, mutFunc);
     }
 }
@@ -275,35 +277,4 @@ std::ostream& operator<<(std::ostream& os, const DNA* dt) {
 
 
 //int main() {
-    //srand (time(NULL));
-    //Agent * a = new Agent();
-    //auto testClassify = [](int c){
-        //switch(c) {
-            //case 0:
-                //return 0;
-            //case 1:
-                //return 10;
-            //case 2:
-                //return 20;
-            //case 3:
-                //return 30;
-            //default:
-                //return -5;
-        //}
-    //};
-    ////a->calcSimpleFitness([](float x){return false;});
-    //a->setRandomDNAStrain([&]() -> gene* {
-        //float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        //if(randNum < .3) {
-            //return new gene(false, static_cast<op>(rand()%5), 0);
-        //} else if(randNum < (.3 + .15)) {
-            //return new gene(false, op::Constant, rand()%20);
-        //} else {
-            //return new gene(false, op::Feature, rand()%10);
-        //}
-    //});
-    //std::cout << a->dna << std::endl;
-    //a->classification([](int featureNumber){
-        //return float(featureNumber);
-    //});
 //}

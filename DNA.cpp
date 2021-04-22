@@ -59,7 +59,6 @@ class Agent {
         /**
          * Builds a random DNA strain
          */
-        //template <typename T>
         void setRandomDNAStrain(std::function<gene*(bool, int)> randomGeneGen) {
             std::function<void(std::unique_ptr<gene>&, int)> rec = [&](std::unique_ptr<gene>& currGene, int d) -> void {
                 switch(currGene->type) {
@@ -276,5 +275,3 @@ std::ostream& operator<<(std::ostream& os, const DNA* dt) {
 }
 
 
-//int main() {
-//}

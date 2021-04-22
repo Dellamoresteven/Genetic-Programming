@@ -1,6 +1,6 @@
 CXX?=c++
 OPENCV2FLAGS=$(shell pkg-config opencv --cflags --libs)
-CXXFLAGS?=-std=c++20 -Wall -pedantic -Wshadow -Wstrict-aliasing -Wstrict-overflow
+CXXFLAGS?=-std=c++20 -Wall -pedantic -Wshadow -Wstrict-aliasing -Wstrict-overflow -ggdb3
 
 .PHONY: all msg clean fullclean
 

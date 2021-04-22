@@ -99,10 +99,10 @@ struct dataset {
     }
 };
 
-void extractFeatures(vector<dataset> * data) {
+void extractFeatures(vector<dataset>& data) {
     // All images should be the same size
-    int rows = data->at(0).img.rows;
-    int cols = data->at(0).img.cols;
+    int rows = data.at(0).img.rows;
+    int cols = data.at(0).img.cols;
 
     auto MeanROICalc = [](Mat i, int x1, int x2, int y1, int y2, float& m, float& s) {
         cv::Scalar mean, stddev;
@@ -111,7 +111,7 @@ void extractFeatures(vector<dataset> * data) {
         s = stddev[0];
     };
 
-    for(auto & entry : *data) {
+    for(auto & entry : data) {
         // Set up ROI's in the research paper
         MeanROICalc(entry.img,0,rows/4,0,cols/2, entry.ABEDmean, entry.ABEDstd);
         MeanROICalc(entry.img,0,rows/4,cols/2, cols, entry.BCFEmean, entry.BCFEstd);
@@ -127,14 +127,14 @@ void extractFeatures(vector<dataset> * data) {
     }
 }
 
-void readDataset(vector<dataset> * data, bool isTraining) {
+void readDataset(vector<dataset>& data, bool isTraining) {
     auto readFunc = [&](string dir, string label) {
         for(const auto & entry : fs::directory_iterator(dir)) {
             dataset d;
             d.img = imread((string) entry.path(), IMREAD_GRAYSCALE);
             d.image_path = entry.path();
             d.label = label;
-            data->push_back(d);
+            data.push_back(d);
         }
     };
     if(isTraining) {
@@ -185,10 +185,10 @@ namespace GP {
         }
     }
 
-    void classifyAgents(vector<dataset> data) {
+    void classifyAgents(vector<dataset>& data) {
     }
 
-    void fitnessAgents(vector<dataset> data) {
+    void fitnessAgents(vector<dataset>& data) {
     }
 
     void resetAgents() {
@@ -207,10 +207,15 @@ namespace GP {
     }
 }
 
-
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     vector<dataset> data;
-    readDataset(&data, true);
-    extractFeatures(&data);
+    readDataset(data, true);
+    extractFeatures(data);
+
+    for(int i = 0; i < GP::maxGenerations; i++) {
+        GP::classifyAgents(data);
+        GP::fitnessAgents(data);
+        GP::Breed();
+    }
 }

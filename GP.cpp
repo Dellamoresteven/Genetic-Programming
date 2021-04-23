@@ -6,8 +6,15 @@
 #include <cstdlib>
 #include <ctime>
 #include <limits>
+#include <cstdlib>
+#include <iostream>
+#include <future>
+#include <unistd.h>
+#include <vector>
 #include "opencv2/opencv.hpp"
 #include "DNA.cpp"
+
+#define ASYNC_CODE true
 
 using std::cout;
 using std::endl;
@@ -112,7 +119,6 @@ void extractFeatures(vector<dataset>& data) {
     };
 
     for(auto & entry : data) {
-        // Set up ROI's in the research paper
         MeanROICalc(entry.img,0,rows/4,0,cols/2, entry.ABEDmean, entry.ABEDstd);
         MeanROICalc(entry.img,0,rows/4,cols/2, cols, entry.BCFEmean, entry.BCFEstd);
         MeanROICalc(entry.img,rows/4,rows/2,0,cols/2, entry.DEHGmean, entry.DEHGstd);
@@ -171,7 +177,7 @@ namespace GP {
     void initPopulation(int num) {
         for(int i = 0; i < populationSize; i++) {
             agents.push_back(std::make_unique<Agent>(Agent()));
-            agents.at(agents.size())->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
+            agents.at(agents.size() - 1)->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
                 if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
                 float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 if(randNum < OpChance && currDepth < maxDepth) {
@@ -186,9 +192,67 @@ namespace GP {
     }
 
     void classifyAgents(vector<dataset>& data) {
+#if !ASYNC_CODE
+        for(auto &a : agents) {
+            for(auto &d : data) {
+                a->classification([&](int index){
+                        return d.replaceFeature(index);
+                });
+            }
+        }
+#else
+        std::vector< std::future<void> > voidFutures;
+        for(auto &a : agents) {
+            voidFutures.push_back(std::async(std::launch::async,
+                [&](){
+                    for(auto &d : data) {
+                        a->classification([&](int index){
+                            return d.replaceFeature(index);
+                        });
+                    }
+                }
+            ));
+        }
+#endif
     }
 
     void fitnessAgents(vector<dataset>& data) {
+        vector<string> answers;
+        for(auto &d : data) {
+            answers.push_back(d.label);
+        }
+        auto fitnessTest = [&](int index, int ans) {
+            //PrettyPrint(index);
+            //PrettyPrint(answers.size());
+            if(ans >= 0 && answers.at(index) == "ped") {
+                return true;
+            }
+            if(ans < 0 && answers.at(index) == "non-ped") {
+                return true;
+            };
+            return false;
+        };
+#if !ASYNC_CODE
+        for(auto &a : agents) {
+            a->calcSimpleFitness(fitnessTest);
+        }
+#else
+        std::vector< std::future<void> > voidFutures;
+        for(auto &a : agents) {
+            voidFutures.push_back(std::async(std::launch::async,
+                [&](){
+                    a->calcSimpleFitness(fitnessTest);
+                }
+            ));
+        }
+#endif
+        std::sort(agents.begin(), agents.end(), [](std::unique_ptr<Agent>& one, std::unique_ptr<Agent>& two){
+            return one->fitness > two->fitness;
+        });
+
+        for(int i = 0; i < 10; i++) {
+            PrettyPrint(agents.at(i)->getFitness());
+        }
     }
 
     void resetAgents() {
@@ -213,9 +277,12 @@ int main() {
     readDataset(data, true);
     extractFeatures(data);
 
+    GP::initPopulation(GP::populationSize);
     for(int i = 0; i < GP::maxGenerations; i++) {
+        cout << "###############" << " " << i << " " << "###############" << endl;
         GP::classifyAgents(data);
         GP::fitnessAgents(data);
         GP::Breed();
+        GP::resetAgents();
     }
 }

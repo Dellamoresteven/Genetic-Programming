@@ -4,8 +4,11 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <mutex>
 
 enum op { Plus = 0, Minus = 1, Mul = 2, Div = 3, If = 4, Constant = 5, Feature = 6 };
+
+#define PrettyPrint(x) std::cout << #x << " : " << x << std::endl;
 
 struct gene {
     gene(bool isRoot, op o, float val) {
@@ -45,16 +48,17 @@ class DNA {
         }
 };
 
-
 class Agent {
     private:
-
+        std::mutex * c_lock;
     public:
         float fitness;
         std::vector<float> classifications;
         std::unique_ptr<DNA> dna = nullptr;
 
-        Agent() {}
+        Agent() {
+            c_lock = new std::mutex();
+        }
 
         /**
          * Builds a random DNA strain
@@ -133,6 +137,7 @@ class Agent {
                 return 0.0;
             };
             float score = rec(dna->gRoot);
+            const std::lock_guard<std::mutex> lock(*c_lock);
             classifications.push_back(score);
             return score;
         }
@@ -219,7 +224,7 @@ void copyGeneTree( std::unique_ptr<gene> from, std::unique_ptr<gene>& to, T mutF
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const std::unique_ptr<gene> node) {
+std::ostream& operator<<(std::ostream& os, const std::unique_ptr<gene>::pointer& node) {
     switch(static_cast<int>(node->type)) {
         case Plus:
             os << "+";
@@ -249,7 +254,7 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<gene> node) {
 /**
  * DNA print override
  */
-std::ostream& operator<<(std::ostream& os, const DNA* dt) {
+std::ostream& operator<<(std::ostream& os, const std::unique_ptr<DNA>& dt) {
     int depth = 0;
     std::vector<std::unique_ptr<gene>::pointer> nodeList;
     nodeList.push_back(dt->gRoot.get());

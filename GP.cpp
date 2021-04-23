@@ -14,7 +14,8 @@
 #include "opencv2/opencv.hpp"
 #include "DNA.cpp"
 
-#define ASYNC_CODE true
+//#define ASYNC_CODE true
+#define ASYNC_CODE false
 
 using std::cout;
 using std::endl;
@@ -156,12 +157,12 @@ void readDataset(vector<dataset>& data, bool isTraining) {
 
 namespace GP {
     // Params for evolution
-    int   populationSize = 200;  // Number of agents per round
+    int   populationSize = 100;  // Number of agents per round
     int   selectionSize  = 10;    // Number of agents in the tournament selection
     int   maxDepth       = 10;    // Max Depth of classification tree
     int   maxGenerations = 100000; // Max number of generations
-    int   numBreed       = 10;    // Number of new agents during breeding
-    int   numAdopt       = 20;    // Number of new agents to adopt
+    int   numBreed       = 20;    // Number of new agents during breeding
+    int   numAdopt       = 40;    // Number of new agents to adopt
     float mutationRate   = .1;  // % mutation rate of DNA
     float OpChance       = 0.40; // Chance of adding an operator to the DNA
     float constChance    = 0.1; // Chance of adding a constant to the DNA
@@ -185,7 +186,7 @@ namespace GP {
                 } else if(randNum < (OpChance + constChance)) {
                     return new gene(false, op::Constant, rand()%maxConst);
                 } else {
-                    return new gene(false, op::Feature, rand()%11);
+                    return new gene(false, op::Feature, rand()%22);
                 }
             });
         }
@@ -194,6 +195,7 @@ namespace GP {
     void classifyAgents(vector<dataset>& data) {
 #if !ASYNC_CODE
         for(auto &a : agents) {
+            cout << a->dna << endl;
             for(auto &d : data) {
                 a->classification([&](int index){
                         return d.replaceFeature(index);
@@ -255,19 +257,55 @@ namespace GP {
         }
     }
 
-    gene* mutFunc(gene* g) {
-        return g;
-    }
+gene* mutFunc(gene* g, int gDepth){
+    std::function<gene*(int)> makeRandomGene = [&](int depth){
+        float opRand = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        int value = 0;
+        int type = 0;
+        if(depth == maxDepth){
+            while(opRand < .4){
+                opRand = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            }
+        }
+        if(opRand < .32){ //+-*/
+            g->l.reset(makeRandomGene(depth+1));
+            g->r.reset(makeRandomGene(depth+1));
+            if(opRand < .8){
+                type = 0;
+            } else if(opRand > .8 && opRand < .16){
+                type = 1;
+            } else if(opRand > .16 && opRand < .24){
+                type = 2;
+            } else if(opRand > .24){
+                type = 3;
+            }
+        } else if(opRand > .32 && opRand < .4){ //if
+            g->l.reset(makeRandomGene(depth+1));
+            g->m.reset(makeRandomGene(depth+1));
+            g->r.reset(makeRandomGene(depth+1));
+            type = 4;
+        } else if(opRand > .4 && opRand < .5){ //constant
+            value = rand() % maxConst + 1;
+            type = 5;
+        } else if(opRand > .5){ //feature
+            value = rand() % 22;
+            type = 6;
+        }
+        return new gene(g->root,static_cast <op>(type),value);
+    };
+        g = makeRandomGene(gDepth);
+    return g;
+}
 
     Agent crossover(std::unique_ptr<Agent>::pointer a1, std::unique_ptr<Agent>::pointer a2) {
         Agent newAgent = Agent();
         DNA * newDNA = new DNA();
         if(rand()%10 > 5) {
-            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFunc);
-            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
+            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFunc, 0, mutationRate);
+            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFunc, 1, mutationRate);
         } else {
-            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFunc);
-            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
+            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFunc, 0, mutationRate);
+            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFunc, 1, mutationRate);
         }
         newAgent.dna.reset(newDNA);
         return newAgent;
@@ -306,8 +344,11 @@ int main() {
         std::sort(GP::agents.begin(), GP::agents.end(), [](std::unique_ptr<Agent>& one, std::unique_ptr<Agent>& two){
             return one->fitness > two->fitness;
         });
-        for(int j = 0; j < 10; j++) {
+        for(int j = 0; j < 5; j++) {
             PrettyPrint(GP::agents.at(j)->getFitness());
+        }
+        for(int j = 0; j < 5; j++) {
+            PrettyPrint(GP::agents.at(GP::agents.size() - j - 1)->getFitness());
         }
         cout << GP::agents.at(0)->dna << endl;
 

@@ -207,18 +207,18 @@ gene* copyGene( std::unique_ptr<gene>& from ) {
     return (new gene(from->root, from->type, from->value));
 }
 
-template<typename T>
-void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc ) {
-    if(from != NULL) {
-        to.reset(mutFunc(copyGene(from)));
-        to->l.reset(mutFunc(copyGene(from->l)));
-        copyGeneTree(from->l, to->l, mutFunc);
-        to->m.reset(mutFunc(copyGene(from->m)));
-        copyGeneTree(from->m, to->m, mutFunc);
-        to->r.reset(mutFunc(copyGene(from->r)));
-        copyGeneTree(from->r, to->r, mutFunc);
-    }
-}
+//template<typename T>
+//void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc, int depth ) {
+    //if(from != NULL) {
+        //to.reset(mutFunc(copyGene(from)));
+        //to->l.reset(mutFunc(copyGene(from->l)));
+        //copyGeneTree(from->l, to->l, mutFunc, depth + 1);
+        //to->m.reset(mutFunc(copyGene(from->m)));
+        //copyGeneTree(from->m, to->m, mutFunc, depth + 1);
+        //to->r.reset(mutFunc(copyGene(from->r)));
+        //copyGeneTree(from->r, to->r, mutFunc, depth + 1);
+    //}
+//}
 
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<gene>::pointer& node) {
     switch(static_cast<int>(node->type)) {
@@ -247,6 +247,8 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<gene>::pointer&
     return os;
 }
 
+
+
 /**
  * DNA print override
  */
@@ -273,5 +275,23 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<DNA>& dt) {
         depth += 1;
     }
     return os;
+}
+
+template<typename T>
+void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc, int depth, float mutRate ) {
+    if(from != NULL) {
+        float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        if(randNum < mutRate) { // mutate L
+            to.reset(mutFunc(copyGene(from), depth));
+        } else {
+            to.reset(copyGene(from));
+            to->l.reset(copyGene(from->l));
+            copyGeneTree(from->l, to->l, mutFunc, depth + 1, mutRate);
+            to->m.reset(copyGene(from->m));
+            copyGeneTree(from->m, to->m, mutFunc, depth + 1, mutRate);
+            to->r.reset(copyGene(from->r));
+            copyGeneTree(from->r, to->r, mutFunc, depth + 1, mutRate);
+        }
+    }
 }
 

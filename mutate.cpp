@@ -54,6 +54,8 @@ gene* mutFunc(gene* g, int gDepth){
     std::function<gene*(int)> makeRandomGene = [&](int depth){
         float opRand = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         int value = 0;
+        int type = 0;
+        print(opRand);
         if(depth == maxDepth){
             while(opRand < .4){
                 opRand = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -63,27 +65,39 @@ gene* mutFunc(gene* g, int gDepth){
         if(opRand < .32){ //+-*/
             g->l.reset(makeRandomGene(depth+1));
             g->r.reset(makeRandomGene(depth+1));
+            if(opRand < .8){
+                type = 0;
+            } else if(opRand > .8 && opRand < .16){
+                type = 1;
+            } else if(opRand > .16 && opRand < .24){
+                type = 2;
+            } else if(opRand > .24){
+                type = 3;
+            }
         } else if(opRand > .32 && opRand < .4){ //if
             g->l.reset(makeRandomGene(depth+1));
             g->m.reset(makeRandomGene(depth+1));
             g->r.reset(makeRandomGene(depth+1));
+            type = 4;
         } else if(opRand > .4 && opRand < .5){ //constant
             value = rand() % maxConst + 1;
+            type = 5;
         } else if(opRand > .5){ //feature
             value = rand() % 23;
+            type = 6;
         }
-        return new gene(g->root,static_cast <op>(opRand),value);
+        return new gene(g->root,static_cast <op>(type),value);
     };
-    if(randNum < mutationRate){
+  //  if(randNum < mutationRate){
         g = makeRandomGene(gDepth);
-    }
+  //  }
     return g;
 }
 
 
 int main(){
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
-    gene * fakeGene = new gene(false, op::Plus,2);
+    gene * fakeGene = new gene(false, op::Minus,2);
     rand();
     fakeGene = mutFunc(fakeGene, 0);
 }

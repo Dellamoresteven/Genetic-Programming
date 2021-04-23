@@ -159,9 +159,9 @@ namespace GP {
     int   populationSize = 200;  // Number of agents per round
     int   selectionSize  = 10;    // Number of agents in the tournament selection
     int   maxDepth       = 10;    // Max Depth of classification tree
-    int   maxGenerations = 100; // Max number of generations
+    int   maxGenerations = 100000; // Max number of generations
     int   numBreed       = 10;    // Number of new agents during breeding
-    int   numAdopt       = 10;    // Number of new agents to adopt
+    int   numAdopt       = 20;    // Number of new agents to adopt
     float mutationRate   = .1;  // % mutation rate of DNA
     float OpChance       = 0.40; // Chance of adding an operator to the DNA
     float constChance    = 0.1; // Chance of adding a constant to the DNA
@@ -175,7 +175,7 @@ namespace GP {
     vector<std::unique_ptr<Agent>> agents;
 
     void initPopulation(int num) {
-        for(int i = 0; i < populationSize; i++) {
+        for(int i = 0; i < num; i++) {
             agents.push_back(std::make_unique<Agent>(Agent()));
             agents.at(agents.size() - 1)->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
                 if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
@@ -246,13 +246,7 @@ namespace GP {
             ));
         }
 #endif
-        std::sort(agents.begin(), agents.end(), [](std::unique_ptr<Agent>& one, std::unique_ptr<Agent>& two){
-            return one->fitness > two->fitness;
-        });
 
-        for(int i = 0; i < 10; i++) {
-            PrettyPrint(agents.at(i)->getFitness());
-        }
     }
 
     void resetAgents() {
@@ -261,13 +255,38 @@ namespace GP {
         }
     }
 
-    std::unique_ptr<gene> mutFunc(std::unique_ptr<gene> g) {
+    gene* mutFunc(gene* g) {
+        return g;
     }
 
-    Agent* crossover(Agent * a1, Agent * a2) {
+    Agent crossover(std::unique_ptr<Agent>::pointer a1, std::unique_ptr<Agent>::pointer a2) {
+        Agent newAgent = Agent();
+        DNA * newDNA = new DNA();
+        if(rand()%10 > 5) {
+            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFunc);
+            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
+        } else {
+            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFunc);
+            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFunc);
+        }
+        newAgent.dna.reset(newDNA);
+        return newAgent;
     }
 
     void Breed() {
+        vector<std::unique_ptr<Agent>::pointer> randomAgents;
+        agents.resize(agents.size()-(numBreed + numAdopt));
+        for(int i = 0; i < numBreed; i++) {
+            for(int j = 0; j < selectionSize; j++) {
+                randomAgents.push_back(agents.at(rand() % agents.size()).get());
+            }
+            std::sort(randomAgents.begin(), randomAgents.end(), [](std::unique_ptr<Agent>::pointer one, std::unique_ptr<Agent>::pointer two){
+                return one->fitness > two->fitness;
+            });
+            agents.push_back(std::make_unique<Agent>(crossover(randomAgents[0], randomAgents[1])));
+            randomAgents.clear();
+        }
+        initPopulation(numAdopt);
     }
 }
 
@@ -279,9 +298,19 @@ int main() {
 
     GP::initPopulation(GP::populationSize);
     for(int i = 0; i < GP::maxGenerations; i++) {
+    //for(int i = 0; i < 2; i++) {
         cout << "###############" << " " << i << " " << "###############" << endl;
         GP::classifyAgents(data);
+
         GP::fitnessAgents(data);
+        std::sort(GP::agents.begin(), GP::agents.end(), [](std::unique_ptr<Agent>& one, std::unique_ptr<Agent>& two){
+            return one->fitness > two->fitness;
+        });
+        for(int j = 0; j < 10; j++) {
+            PrettyPrint(GP::agents.at(j)->getFitness());
+        }
+        cout << GP::agents.at(0)->dna << endl;
+
         GP::Breed();
         GP::resetAgents();
     }

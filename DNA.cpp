@@ -17,14 +17,6 @@ struct gene {
         value = val;
     }
 
-    gene(bool isRoot, op o, float val, gene* le, gene* mi, gene* ri) {
-        root  = isRoot;
-        type  = o;
-        value = val;
-        l.reset(le);
-        m.reset(mi);
-        r.reset(ri);
-    }
     bool root = false;
     op type;
     float value;
@@ -50,15 +42,19 @@ class DNA {
 
 class Agent {
     private:
-        std::mutex * c_lock;
+        std::unique_ptr<std::mutex> c_lock;
     public:
         float fitness;
         std::vector<float> classifications;
         std::unique_ptr<DNA> dna = nullptr;
 
         Agent() {
-            c_lock = new std::mutex();
+            c_lock.reset(new std::mutex());
         }
+
+        //~Agent(){
+            //delete c_lock;
+        //}
 
         /**
          * Builds a random DNA strain
@@ -204,22 +200,22 @@ class Agent {
         }
 };
 
-gene* copyGene( std::unique_ptr<gene> from ) {
+gene* copyGene( std::unique_ptr<gene>& from ) {
     if(from == NULL) {
         return NULL;
     }
-    return (new gene(from->root, from->type, from->value, from->l.get(), from->m.get(), from->r.get()));
+    return (new gene(from->root, from->type, from->value));
 }
 
 template<typename T>
-void copyGeneTree( std::unique_ptr<gene> from, std::unique_ptr<gene>& to, T mutFunc ) {
+void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc ) {
     if(from != NULL) {
-        to = std::make_unique<gene>(copyGene(from));
-        //to->l = std::make_unique<gene>(mutFunc(copyGene(from->l)));
+        to.reset(mutFunc(copyGene(from)));
+        to->l.reset(mutFunc(copyGene(from->l)));
         copyGeneTree(from->l, to->l, mutFunc);
-        //to->m = std::make_unique<gene>(mutFunc(copyGene(from->m)));
+        to->m.reset(mutFunc(copyGene(from->m)));
         copyGeneTree(from->m, to->m, mutFunc);
-        //to->r = std::make_unique<gene>(mutFunc(copyGene(from->r)));
+        to->r.reset(mutFunc(copyGene(from->r)));
         copyGeneTree(from->r, to->r, mutFunc);
     }
 }
@@ -278,5 +274,4 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<DNA>& dt) {
     }
     return os;
 }
-
 

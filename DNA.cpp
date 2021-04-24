@@ -281,9 +281,9 @@ template<typename T>
 void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc, int depth, float mutRate ) {
     if(from != NULL) {
         float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        if(randNum < mutRate) { // mutate L
-            to.reset(mutFunc(copyGene(from), depth));
-        } else {
+        //if(randNum < mutRate) { // mutate L
+            //to.reset(mutFunc(copyGene(from), depth));
+        //} else {
             to.reset(copyGene(from));
             to->l.reset(copyGene(from->l));
             copyGeneTree(from->l, to->l, mutFunc, depth + 1, mutRate);
@@ -291,7 +291,7 @@ void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mut
             copyGeneTree(from->m, to->m, mutFunc, depth + 1, mutRate);
             to->r.reset(copyGene(from->r));
             copyGeneTree(from->r, to->r, mutFunc, depth + 1, mutRate);
-        }
+        //}
     }
 }
 

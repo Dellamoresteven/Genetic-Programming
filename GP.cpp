@@ -15,7 +15,7 @@
 #include "DNA.cpp"
 
 //#define ASYNC_CODE true
-#define ASYNC_CODE false
+#define ASYNC_CODE true
 
 using std::cout;
 using std::endl;
@@ -195,7 +195,6 @@ namespace GP {
     void classifyAgents(vector<dataset>& data) {
 #if !ASYNC_CODE
         for(auto &a : agents) {
-            cout << a->dna << endl;
             for(auto &d : data) {
                 a->classification([&](int index){
                         return d.replaceFeature(index);

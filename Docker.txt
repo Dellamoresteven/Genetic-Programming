@@ -7,4 +7,4 @@ docker start ubuntu # STOP CONTAINER
 docker exec -it ubuntu bash # LAUNCH SHELL INTO CONTAINER
 docker commit ubuntu # COMMIT CHANGES TO CONTAINER
 docker push dellamoresteven/ubuntu_container # PUSH THE DOCKER CONTAINER
-
+docker commit <CONTAINERID> dellamoresteven/ubuntu_container # PUSH CONTAINER ID TO DOCKER GITHUB

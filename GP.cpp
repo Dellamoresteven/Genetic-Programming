@@ -148,7 +148,7 @@ void readDataset(vector<dataset>& data, bool isTraining) {
         readFunc("./data/1/ped_examples/", "ped");
         readFunc("./data/1/non-ped_examples/", "non-ped");
         //readFunc("./data/2/ped_examples/", "ped");
-        //readFunc("./data/2/non-ped_examples/", "non-ped");
+        readFunc("./data/2/non-ped_examples/", "non-ped");
     } else {
         readFunc("./data/3/ped_examples/", "ped");
         readFunc("./data/3/non-ped_examples/", "non-ped");
@@ -158,14 +158,14 @@ void readDataset(vector<dataset>& data, bool isTraining) {
 namespace GP {
     // Params for evolution
     int   populationSize = 100;  // Number of agents per round
-    int   selectionSize  = 10;    // Number of agents in the tournament selection
+    int   selectionSize  = populationSize/15;    // Number of agents in the tournament selection
     int   maxDepth       = 10;    // Max Depth of classification tree
     int   maxGenerations = 100000; // Max number of generations
-    int   numBreed       = 20;    // Number of new agents during breeding
-    int   numAdopt       = 40;    // Number of new agents to adopt
+    int   numBreed       = populationSize/10;    // Number of new agents during breeding
+    int   numAdopt       = populationSize/20;    // Number of new agents to adopt
     float mutationRate   = .1;  // % mutation rate of DNA
-    float OpChance       = 0.40; // Chance of adding an operator to the DNA
-    float constChance    = 0.1; // Chance of adding a constant to the DNA
+    float OpChance       = 0.3; // Chance of adding an operator to the DNA
+    float constChance    = 0.2; // Chance of adding a constant to the DNA
     float featureChance  = 0.5; // Chance of adding a feature to the DNA
     int   maxConst       = 10;  // Max const
     int   bestFitness    = 0; // Best fitness of all gens
@@ -178,7 +178,7 @@ namespace GP {
     void initPopulation(int num) {
         for(int i = 0; i < num; i++) {
             agents.push_back(std::make_unique<Agent>(Agent()));
-            agents.at(agents.size() - 1)->setRandomDNAStrain([&](bool isRoot, int currDepth) -> gene* {
+            agents.at(agents.size() - 1)->setRandomDNAStrain(0, [&](bool isRoot, int currDepth) -> gene* {
                 if(isRoot) return new gene(true, static_cast<op>(rand()%5), 0);
                 float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 if(randNum < OpChance && currDepth < maxDepth) {
@@ -256,57 +256,35 @@ namespace GP {
         }
     }
 
-gene* mutFunc(gene* g, int gDepth){
-    std::function<gene*(int)> makeRandomGene = [&](int depth){
-        float opRand = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        int value = 0;
-        int type = 0;
-        if(depth == maxDepth){
-            while(opRand < .4){
-                opRand = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    std::unique_ptr<gene> mutFuncTwo(gene* g, const int gDepth) {
+        std::unique_ptr<Agent> a = std::make_unique<Agent>();
+        a->setRandomDNAStrain(gDepth, [&](bool isRoot, int currDepth) -> gene* {
+            float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            if(randNum < OpChance && currDepth < maxDepth) {
+                return new gene(false, static_cast<op>(rand()%5), 0);
+            } else if(randNum < (OpChance + constChance)) {
+                return new gene(false, op::Constant, rand()%maxConst);
+            } else {
+                return new gene(false, op::Feature, rand()%22);
             }
-        }
-        if(opRand < .32){ //+-*/
-            g->l.reset(makeRandomGene(depth+1));
-            g->r.reset(makeRandomGene(depth+1));
-            if(opRand < .8){
-                type = 0;
-            } else if(opRand > .8 && opRand < .16){
-                type = 1;
-            } else if(opRand > .16 && opRand < .24){
-                type = 2;
-            } else if(opRand > .24){
-                type = 3;
-            }
-        } else if(opRand > .32 && opRand < .4){ //if
-            g->l.reset(makeRandomGene(depth+1));
-            g->m.reset(makeRandomGene(depth+1));
-            g->r.reset(makeRandomGene(depth+1));
-            type = 4;
-        } else if(opRand > .4 && opRand < .5){ //constant
-            value = rand() % maxConst + 1;
-            type = 5;
-        } else if(opRand > .5){ //feature
-            value = rand() % 22;
-            type = 6;
-        }
-        return new gene(g->root,static_cast <op>(type),value);
-    };
-        g = makeRandomGene(gDepth);
-    return g;
-}
+        });
+        gene * ret = a->dna->gRoot.release();
+        return std::unique_ptr<gene>(ret);
+    }
 
     Agent crossover(std::unique_ptr<Agent>::pointer a1, std::unique_ptr<Agent>::pointer a2) {
         Agent newAgent = Agent();
         DNA * newDNA = new DNA();
         if(rand()%10 > 5) {
-            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFunc, 0, mutationRate);
-            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFunc, 1, mutationRate);
+            copyGeneTree(a1->dna->gRoot, newDNA->gRoot, mutFuncTwo, 0, mutationRate);
+            copyGeneTree(a2->dna->gRoot->l, newDNA->gRoot->l, mutFuncTwo, 1, mutationRate);
         } else {
-            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFunc, 0, mutationRate);
-            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFunc, 1, mutationRate);
+            copyGeneTree(a2->dna->gRoot, newDNA->gRoot, mutFuncTwo, 0, mutationRate);
+            copyGeneTree(a1->dna->gRoot->l, newDNA->gRoot->l, mutFuncTwo, 1, mutationRate);
         }
         newAgent.dna.reset(newDNA);
+        //cout << "NEW AGENT:" << endl;
+        //cout << newAgent.dna << endl;
         return newAgent;
     }
 

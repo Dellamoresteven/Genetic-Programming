@@ -59,7 +59,7 @@ class Agent {
         /**
          * Builds a random DNA strain
          */
-        void setRandomDNAStrain(std::function<gene*(bool, int)> randomGeneGen) {
+        void setRandomDNAStrain(int pDepth, std::function<gene*(bool, int)> randomGeneGen) {
             std::function<void(std::unique_ptr<gene>&, int)> rec = [&](std::unique_ptr<gene>& currGene, int d) -> void {
                 switch(currGene->type) {
                     case Plus:
@@ -86,8 +86,8 @@ class Agent {
                 }
             };
             DNA * ret = new DNA();
-            ret->gRoot.reset(randomGeneGen(true, 0));
-            rec(ret->gRoot, 0);
+            ret->gRoot.reset(randomGeneGen(true, pDepth));
+            rec(ret->gRoot, pDepth);
             dna.reset(ret);
         }
 
@@ -208,15 +208,15 @@ gene* copyGene( std::unique_ptr<gene>& from ) {
 }
 
 //template<typename T>
-//void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc, int depth ) {
-    //if(from != NULL) {
-        //to.reset(mutFunc(copyGene(from)));
-        //to->l.reset(mutFunc(copyGene(from->l)));
-        //copyGeneTree(from->l, to->l, mutFunc, depth + 1);
-        //to->m.reset(mutFunc(copyGene(from->m)));
-        //copyGeneTree(from->m, to->m, mutFunc, depth + 1);
-        //to->r.reset(mutFunc(copyGene(from->r)));
-        //copyGeneTree(from->r, to->r, mutFunc, depth + 1);
+//void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc, int depth, float mutRate ) {
+    //if(from != NULL && from != nullptr) {
+        //to.reset(mutFunc(copyGene(from), depth, mutRate));
+        //to->l.reset(mutFunc(copyGene(from->l), depth, mutRate));
+        //copyGeneTree(from->l, to->l, mutFunc, depth + 1, mutRate);
+        //to->m.reset(mutFunc(copyGene(from->m), depth, mutRate));
+        //copyGeneTree(from->m, to->m, mutFunc, depth + 1, mutRate);
+        //to->r.reset(mutFunc(copyGene(from->r), depth, mutRate));
+        //copyGeneTree(from->r, to->r, mutFunc, depth + 1, mutRate);
     //}
 //}
 
@@ -281,9 +281,13 @@ template<typename T>
 void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mutFunc, int depth, float mutRate ) {
     if(from != NULL) {
         float randNum = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        //if(randNum < mutRate) { // mutate L
-            //to.reset(mutFunc(copyGene(from), depth));
-        //} else {
+        if(randNum < mutRate) {
+            //to = mutFunc(copyGene(from), depth);
+            //to.reset(new gene(false, op::Feature, 5));
+            to = mutFunc(copyGene(from), depth);
+            //to = std::make_unique<gene>(new gene(false, op::Feature, 5));
+            return;
+        } else {
             to.reset(copyGene(from));
             to->l.reset(copyGene(from->l));
             copyGeneTree(from->l, to->l, mutFunc, depth + 1, mutRate);
@@ -291,7 +295,6 @@ void copyGeneTree( std::unique_ptr<gene>& from, std::unique_ptr<gene>& to, T mut
             copyGeneTree(from->m, to->m, mutFunc, depth + 1, mutRate);
             to->r.reset(copyGene(from->r));
             copyGeneTree(from->r, to->r, mutFunc, depth + 1, mutRate);
-        //}
+        }
     }
 }
-

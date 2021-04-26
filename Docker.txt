@@ -1,0 +1,10 @@
+docker pull dellamoresteven/ubuntu_container # PULL THE DOCKER CONTAINER
+docker container ls # LIST CONTAINERS
+docker container ls -a # LIST ALL CONTAINERS
+docker image # LIST IMAGES
+docker start ubuntu # START CONTAINER
+docker start ubuntu # STOP CONTAINER
+docker exec -it ubuntu bash # LAUNCH SHELL INTO CONTAINER
+docker commit ubuntu # COMMIT CHANGES TO CONTAINER
+docker push dellamoresteven/ubuntu_container # PUSH THE DOCKER CONTAINER
+

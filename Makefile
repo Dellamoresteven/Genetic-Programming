@@ -1,5 +1,5 @@
 CXX?=c++
-OPENCV2FLAGS=$(shell pkg-config opencv --cflags --libs)
+OPENCV2FLAGS=$(shell pkg-config opencv4 --cflags --libs)
 THREADFLAGS=-lpthread
 CXXFLAGS?=-std=c++20 -Wall -pedantic -Wshadow -Wstrict-aliasing -Wstrict-overflow -ggdb3
 

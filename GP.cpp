@@ -29,88 +29,22 @@ struct dataset {
     Mat img;
     string label;
 
-    // ROI's in the research paper
-    float ABEDmean;
-    float BCFEmean;
-    float DEHGmean;
-    float EFIHmean;
-    float GHKJmean;
-    float HILKmean;
-    float JKNMmean;
-    float KLONmean;
-    float PQSRmean;
-    float RSUTmean;
-    float TUWVmean;
-
-    float ABEDstd;
-    float BCFEstd;
-    float DEHGstd;
-    float EFIHstd;
-    float GHKJstd;
-    float HILKstd;
-    float JKNMstd;
-    float KLONstd;
-    float PQSRstd;
-    float RSUTstd;
-    float TUWVstd;
+    // FEATURES
+    vector<float> features;
 
     float replaceFeature(int featureToReplace) {
-        switch(featureToReplace) {
-            case 0:
-                return ABEDmean;
-            case 1:
-                return BCFEmean;
-            case 2:
-                return DEHGmean;
-            case 3:
-                return EFIHmean;
-            case 4:
-                return GHKJmean;
-            case 5:
-                return HILKmean;
-            case 6:
-                return JKNMmean;
-            case 7:
-                return KLONmean;
-            case 8:
-                return PQSRmean;
-            case 9:
-                return RSUTmean;
-            case 10:
-                return TUWVmean;
-            case 11:
-                return ABEDstd;
-            case 12:
-                return BCFEstd;
-            case 13:
-                return DEHGstd;
-            case 14:
-                return EFIHstd;
-            case 15:
-                return GHKJstd;
-            case 16:
-                return HILKstd;
-            case 17:
-                return JKNMstd;
-            case 18:
-                return KLONstd;
-            case 19:
-                return PQSRstd;
-            case 20:
-                return RSUTstd;
-            case 21:
-                return TUWVstd;
-            default:
-                cout << "feature to large" << endl;
-                exit(1);
+        if(featureToReplace >= (int)features.size()) {
+            cout << "TOO BIGGGG" << endl;
+            exit(1);
         }
+        return features.at(featureToReplace);
     }
 };
 
 void extractFeatures(vector<dataset>& data) {
     // All images should be the same size
-    int rows = data.at(0).img.rows;
-    int cols = data.at(0).img.cols;
+    int rows = data.at(0).img.rows; // 36
+    int cols = data.at(0).img.cols; // 18
 
     auto MeanROICalc = [](Mat i, int x1, int x2, int y1, int y2, float& m, float& s) {
         cv::Scalar mean, stddev;
@@ -119,18 +53,15 @@ void extractFeatures(vector<dataset>& data) {
         s = stddev[0];
     };
 
+    float m, s;
     for(auto & entry : data) {
-        MeanROICalc(entry.img,0,rows/4,0,cols/2, entry.ABEDmean, entry.ABEDstd);
-        MeanROICalc(entry.img,0,rows/4,cols/2, cols, entry.BCFEmean, entry.BCFEstd);
-        MeanROICalc(entry.img,rows/4,rows/2,0,cols/2, entry.DEHGmean, entry.DEHGstd);
-        MeanROICalc(entry.img,rows/4, rows/2,cols/2, cols, entry.EFIHmean, entry.EFIHstd);
-        MeanROICalc(entry.img,rows/2, 3*rows/4,0, cols/2, entry.GHKJmean, entry.GHKJmean);
-        MeanROICalc(entry.img,rows/2, 3*rows/4,cols/2, cols, entry.HILKmean, entry.HILKstd);
-        MeanROICalc(entry.img,3*rows/4, rows,0, cols/2, entry.JKNMmean, entry.JKNMstd);
-        MeanROICalc(entry.img,3*rows/4, rows,cols/2, cols, entry.KLONmean, entry.KLONstd);
-        MeanROICalc(entry.img,0, rows/4,cols/3, 2*cols/3, entry.PQSRmean, entry.PQSRstd);
-        MeanROICalc(entry.img,rows/4, (3*rows/4)-2,cols/3, 2*cols/3, entry.RSUTmean, entry.RSUTstd);
-        MeanROICalc(entry.img,(3*rows/4)-2, rows-2,cols/3, 2*cols/3, entry.TUWVmean, entry.TUWVstd);
+        for(int i = 0; i < rows; i+=6) {
+            for(int j = 0; j < cols; j+=3) {
+                MeanROICalc(entry.img,i,i+6,j,j+3, m, s);
+                entry.features.push_back(m);
+                entry.features.push_back(s);
+            }
+        }
     }
 }
 
@@ -148,7 +79,7 @@ void readDataset(vector<dataset>& data, bool isTraining) {
         readFunc("./data/1/ped_examples/", "ped");
         readFunc("./data/1/non-ped_examples/", "non-ped");
         //readFunc("./data/2/ped_examples/", "ped");
-        readFunc("./data/2/non-ped_examples/", "non-ped");
+        //readFunc("./data/2/non-ped_examples/", "non-ped");
     } else {
         readFunc("./data/3/ped_examples/", "ped");
         readFunc("./data/3/non-ped_examples/", "non-ped");
@@ -157,17 +88,18 @@ void readDataset(vector<dataset>& data, bool isTraining) {
 
 namespace GP {
     // Params for evolution
-    int   populationSize = 100;  // Number of agents per round
-    int   selectionSize  = populationSize/15;    // Number of agents in the tournament selection
-    int   maxDepth       = 10;    // Max Depth of classification tree
-    int   maxGenerations = 100000; // Max number of generations
-    int   numBreed       = populationSize/10;    // Number of new agents during breeding
-    int   numAdopt       = populationSize/20;    // Number of new agents to adopt
-    float mutationRate   = .1;  // % mutation rate of DNA
-    float OpChance       = 0.3; // Chance of adding an operator to the DNA
+    int   populationSize = 500;  // Number of agents per round
+    int   selectionSize  = 20;    // Number of agents in the tournament selection
+    int   maxDepth       = 13;    // Max Depth of classification tree
+    int   maxGenerations = 25000; // Max number of generations
+    int   numBreed       = 20;    // Number of new agents during breeding
+    int   numAdopt       = 5;    // Number of new agents to adopt
+    float mutationRate   = .01;  // % mutation rate of DNA
+    float OpChance       = 0.4; // Chance of adding an operator to the DNA
     float constChance    = 0.2; // Chance of adding a constant to the DNA
-    float featureChance  = 0.5; // Chance of adding a feature to the DNA
+    float featureChance  = 0.4; // Chance of adding a feature to the DNA
     int   maxConst       = 10;  // Max const
+    int   numFeatures    = 72; // Number of features
     int   bestFitness    = 0; // Best fitness of all gens
 
     int orgnumAdopt = numAdopt;
@@ -186,7 +118,7 @@ namespace GP {
                 } else if(randNum < (OpChance + constChance)) {
                     return new gene(false, op::Constant, rand()%maxConst);
                 } else {
-                    return new gene(false, op::Feature, rand()%22);
+                    return new gene(false, op::Feature, rand()%numFeatures);
                 }
             });
         }
@@ -206,10 +138,12 @@ namespace GP {
         for(auto &a : agents) {
             voidFutures.push_back(std::async(std::launch::async,
                 [&](){
+                    int i = 0;
                     for(auto &d : data) {
                         a->classification([&](int index){
                             return d.replaceFeature(index);
-                        });
+                        }, i);
+                        i+= 1;
                     }
                 }
             ));
@@ -217,21 +151,49 @@ namespace GP {
 #endif
     }
 
-    void fitnessAgents(vector<dataset>& data) {
+    float fitnessAgentsAgent(vector<dataset>& data, std::unique_ptr<Agent>& a) {
         vector<string> answers;
         for(auto &d : data) {
             answers.push_back(d.label);
         }
+
         auto fitnessTest = [&](int index, int ans) {
-            //PrettyPrint(index);
-            //PrettyPrint(answers.size());
             if(ans >= 0 && answers.at(index) == "ped") {
                 return true;
             }
-            if(ans < 0 && answers.at(index) == "non-ped") {
+            else if(ans < 0 && answers.at(index) == "non-ped") {
                 return true;
-            };
+            }
             return false;
+        };
+        a->calcSimpleFitness(fitnessTest);
+        return a->fitness;
+    }
+
+    void fitnessAgentsAverage(vector<dataset>& data) {
+        vector<string> answers;
+        int mp = 0;
+        int mn = 0;
+        for(auto &d : data) {
+            answers.push_back(d.label);
+            if(d.label == "ped") {
+                mp += 1;
+            } else {
+                mn += 1;
+            }
+        }
+        auto fitnessTestAvg = [&](int index, int ans, int &pTP, int &pTN, int &pFN, int &pFP) {
+            if(ans >= 0 && answers.at(index) == "ped") {
+                pTP += 1;
+            }
+            else if(ans < 0 && answers.at(index) == "non-ped") {
+                pTN += 1;
+            }
+            else if(ans >= 0 && answers.at(index) != "ped") {
+                pFP += 1;
+            } else if(ans < 0 && answers.at(index) != "non-ped") {
+                pFN += 1;
+            }
         };
 #if !ASYNC_CODE
         for(auto &a : agents) {
@@ -242,7 +204,7 @@ namespace GP {
         for(auto &a : agents) {
             voidFutures.push_back(std::async(std::launch::async,
                 [&](){
-                    a->calcSimpleFitness(fitnessTest);
+                    a->calcAverageFitness(fitnessTestAvg, mp, mn);
                 }
             ));
         }
@@ -265,7 +227,7 @@ namespace GP {
             } else if(randNum < (OpChance + constChance)) {
                 return new gene(false, op::Constant, rand()%maxConst);
             } else {
-                return new gene(false, op::Feature, rand()%22);
+                return new gene(false, op::Feature, rand()%numFeatures);
             }
         });
         gene * ret = a->dna->gRoot.release();
@@ -317,12 +279,13 @@ int main() {
         cout << "###############" << " " << i << " " << "###############" << endl;
         GP::classifyAgents(data);
 
-        GP::fitnessAgents(data);
+        GP::fitnessAgentsAverage(data);
         std::sort(GP::agents.begin(), GP::agents.end(), [](std::unique_ptr<Agent>& one, std::unique_ptr<Agent>& two){
             return one->fitness > two->fitness;
         });
         for(int j = 0; j < 5; j++) {
             PrettyPrint(GP::agents.at(j)->getFitness());
+            //PrettyPrint(GP::fitnessAgentsAgent(data, GP::agents.at(j)));
         }
         for(int j = 0; j < 5; j++) {
             PrettyPrint(GP::agents.at(GP::agents.size() - j - 1)->getFitness());

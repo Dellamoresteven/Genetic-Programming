@@ -47,6 +47,10 @@ class Agent {
         float fitness;
         std::vector<float> classifications;
         std::unique_ptr<DNA> dna = nullptr;
+        int TP = 0;
+        int TN = 0;
+        int FN = 0;
+        int FP = 0;
 
         Agent() {
             c_lock.reset(new std::mutex());
@@ -97,6 +101,10 @@ class Agent {
         void reset() {
             classifications.clear();
             fitness = 0;
+            TP = 0;
+            TN = 0;
+            FN = 0;
+            FP = 0;
         }
 
         /**
@@ -106,7 +114,7 @@ class Agent {
          *        the real feature value.
          */
         //template <typename T>
-        float classification(std::function<float(int)> featureTranslator) {
+        float classification(std::function<float(int)> featureTranslator, const int index) {
             std::function<float(std::unique_ptr<gene>&)> rec = [&](std::unique_ptr<gene>& currGene) -> float {
                 switch(currGene->type) {
                     case Plus:
@@ -134,7 +142,7 @@ class Agent {
             };
             float score = rec(dna->gRoot);
             const std::lock_guard<std::mutex> lock(*c_lock);
-            classifications.push_back(score);
+            classifications.push_back(fitness);
             return score;
         }
 
@@ -149,49 +157,36 @@ class Agent {
          */
         template<typename T>
         float calcSimpleFitness(T fitnessTest) {
-            if(classifications.size() == 0) {
-                std::cout << "DNA: Classifications is 0" << std::endl;
-                return -1;
-            }
-            int numCorrect = 0;
-            int i = 0;
-            for(const auto & c : classifications) {
-                if(fitnessTest(i, c)) {
-                    numCorrect += 1;
-                }
-                i += 1;
-            }
-            fitness = float(numCorrect) / float(classifications.size());
+            //if(classifications.size() == 0) {
+                //std::cout << "DNA: Classifications is 0" << std::endl;
+                //return -1;
+            //}
+            //int numCorrect = 0;
+            //int i = 0;
+            //for(const auto & c : classifications) {
+                //if(fitnessTest(i, c)) {
+                    //numCorrect += 1;
+                //}
+                //i += 1;
+            //}
+            //fitness = float(numCorrect) / float(classifications.size());
             return fitness;
         }
 
         template<typename T>
-        float calcAverageFitness(T fitnessTest) {
+        float calcAverageFitness(T fitnessTest, const int mp, const int mn) {
             if(classifications.size() == 0) {
                 std::cout << "DNA: Classifications is 0" << std::endl;
                 return -1;
             }
-            int TP = 0, TN = 0, FN = 0, FP = 0;
             int i = 0;
             for(const auto & c : classifications) {
-                switch(fitnessTest(i, c)) {
-                    case 0:
-                        TP += 1;
-                        break;
-                    case 1:
-                        TN += 1;
-                        break;
-                    case 2:
-                        FN += 1;
-                        break;
-                    case 3:
-                        FP += 1;
-                        break;
-                }
+                fitnessTest(i, c, TP, TN, FN, FP);
                 i += 1;
             }
-            //fitness = float(numCorrect) / float(classifications.size());
-            fitness = ((float(TP)/(TP+FN)) + (float(TN)/(TN+FP))) / 2;
+            //fitness = ((float(TP)/(TP+FN)) + (float(TN)/(TN+FP))) / 2;
+            //fitness = (36*18)*(1-(0.5*(FP/float(mp))) - (0.5*(FN/float(mn))));
+            fitness = (TP + TN) / (float(classifications.size()));
             return fitness;
         }
 

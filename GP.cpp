@@ -14,7 +14,6 @@
 #include "opencv2/opencv.hpp"
 #include "DNA.cpp"
 
-//#define ASYNC_CODE true
 #define ASYNC_CODE true
 
 using std::cout;
@@ -34,7 +33,7 @@ struct dataset {
 
     float replaceFeature(int featureToReplace) {
         if(featureToReplace >= (int)features.size()) {
-            cout << "TOO BIGGGG" << endl;
+            cout << "TOO BIGGGG:" << featureToReplace << " / " << features.size() << endl;
             exit(1);
         }
         return features.at(featureToReplace);
@@ -81,8 +80,8 @@ void readDataset(vector<dataset>& data, bool isTraining) {
         //readFunc("./data/2/ped_examples/", "ped");
         //readFunc("./data/2/non-ped_examples/", "non-ped");
     } else {
-        readFunc("./data/3/ped_examples/", "ped");
-        readFunc("./data/3/non-ped_examples/", "non-ped");
+        readFunc("./data/2/ped_examples/", "ped");
+        readFunc("./data/2/non-ped_examples/", "non-ped");
     }
 }
 
@@ -90,20 +89,16 @@ namespace GP {
     // Params for evolution
     int   populationSize = 500;  // Number of agents per round
     int   selectionSize  = 20;    // Number of agents in the tournament selection
-    int   maxDepth       = 13;    // Max Depth of classification tree
-    int   maxGenerations = 25000; // Max number of generations
-    int   numBreed       = 20;    // Number of new agents during breeding
-    int   numAdopt       = 5;    // Number of new agents to adopt
-    float mutationRate   = .01;  // % mutation rate of DNA
+    int   maxDepth       = 8;    // Max Depth of classification tree
+    int   maxGenerations = 5000; // Max number of generations
+    int   numBreed       = populationSize*.10;    // Number of new agents during breeding
+    int   numAdopt       = 10;    // Number of new agents to adopt
+    float mutationRate   = .30;  // % mutation rate of DNA
     float OpChance       = 0.4; // Chance of adding an operator to the DNA
     float constChance    = 0.2; // Chance of adding a constant to the DNA
     float featureChance  = 0.4; // Chance of adding a feature to the DNA
     int   maxConst       = 10;  // Max const
     int   numFeatures    = 72; // Number of features
-    int   bestFitness    = 0; // Best fitness of all gens
-
-    int orgnumAdopt = numAdopt;
-    int orgmutationRate = mutationRate;
 
     vector<std::unique_ptr<Agent>> agents;
 
@@ -138,12 +133,10 @@ namespace GP {
         for(auto &a : agents) {
             voidFutures.push_back(std::async(std::launch::async,
                 [&](){
-                    int i = 0;
                     for(auto &d : data) {
                         a->classification([&](int index){
                             return d.replaceFeature(index);
-                        }, i);
-                        i+= 1;
+                        });
                     }
                 }
             ));
@@ -197,7 +190,7 @@ namespace GP {
         };
 #if !ASYNC_CODE
         for(auto &a : agents) {
-            a->calcSimpleFitness(fitnessTest);
+            a->calcAverageFitness(fitnessTestAvg, mp, mn);
         }
 #else
         std::vector< std::future<void> > voidFutures;
@@ -265,6 +258,35 @@ namespace GP {
         }
         initPopulation(numAdopt);
     }
+
+    float testBest(std::unique_ptr<Agent>& a) {
+        vector<dataset> data;
+        readDataset(data, false);
+        extractFeatures(data);
+        int TP = 0;
+        int numPed = 0;
+        int TN = 0;
+        int numNonPed = 0;
+        for(auto &d : data) {
+            if(d.label == "ped") {
+                numPed += 1;
+            } else {
+                numNonPed += 1;
+            }
+            float score = a->classification([&](int index){
+                return d.replaceFeature(index);
+            });
+            PrettyPrint(score);
+            if(score >= 0 && d.label == "ped") {
+                TP += 1;
+            } else if(score < 0 && d.label == "non-ped") {
+                TN += 1;
+            }
+        }
+        cout << TP << " / " << numPed << " = " << float(TP)/numPed << endl;
+        cout << TN << " / " << numNonPed << " = " << float(TN)/numNonPed << endl;
+        return 0.0;
+    }
 }
 
 int main() {
@@ -295,4 +317,6 @@ int main() {
         GP::Breed();
         GP::resetAgents();
     }
+
+    GP::testBest(GP::agents.at(0));
 }

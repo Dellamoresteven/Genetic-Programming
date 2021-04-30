@@ -113,8 +113,7 @@ class Agent {
          * @param featureTranslator is a function that takes in a feature int and returns
          *        the real feature value.
          */
-        //template <typename T>
-        float classification(std::function<float(int)> featureTranslator, const int index) {
+        float classification(std::function<float(int)> featureTranslator) {
             std::function<float(std::unique_ptr<gene>&)> rec = [&](std::unique_ptr<gene>& currGene) -> float {
                 switch(currGene->type) {
                     case Plus:
@@ -142,7 +141,7 @@ class Agent {
             };
             float score = rec(dna->gRoot);
             const std::lock_guard<std::mutex> lock(*c_lock);
-            classifications.push_back(fitness);
+            classifications.push_back(score);
             return score;
         }
 
@@ -184,9 +183,9 @@ class Agent {
                 fitnessTest(i, c, TP, TN, FN, FP);
                 i += 1;
             }
-            //fitness = ((float(TP)/(TP+FN)) + (float(TN)/(TN+FP))) / 2;
+            fitness = ((float(TP)/float(TP+FN)) + (float(TN)/float(TN+FP))) / 2;
             //fitness = (36*18)*(1-(0.5*(FP/float(mp))) - (0.5*(FN/float(mn))));
-            fitness = (TP + TN) / (float(classifications.size()));
+            //fitness = (TP + TN) / (float(classifications.size()));
             return fitness;
         }
 
